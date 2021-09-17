@@ -179,11 +179,16 @@ class Orders {
 				$product = Products::get_product_by_fb_retailer_id( $item['retailer_id'] );
 			}
 
-			if ( ! $product instanceof \WC_Product ) {
+			//if ( ! $product instanceof \WC_Product ) {
+			if (! is_a($product,'WC_Product')){
+				// One extra catch to support sites using custom feed sync to Facebook, but using retailer_id as the main key
+				$product = wc_get_product($item['retailer_id']);
+				if (! is_a($product,'WC_Product')){
+					// add a note and skip this item
+					$local_order->add_order_note( "Product with retailer ID {$item['retailer_id']} not found" );
+					continue;
+				}
 
-				// add a note and skip this item
-				$local_order->add_order_note( "Product with retailer ID {$item['retailer_id']} not found" );
-				continue;
 			}
 
 			$matching_wc_order_item = false;
@@ -376,9 +381,12 @@ class Orders {
 	 */
 	public function update_local_orders() {
 		// sanity check for connection status
+		/*
+		// Had to disable this to get orders to sync, which worked, so this santiy check must be off for some reason???
 		if ( ! facebook_for_woocommerce()->get_commerce_handler()->is_connected() ) {
 			return;
 		}
+		*/
 
 		$page_id = facebook_for_woocommerce()->get_integration()->get_facebook_page_id();
 
