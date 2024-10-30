@@ -12,7 +12,8 @@
     "url": "https://wordpress.org/support/plugin/facebook-for-woocommerce"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^14.0.0"
+    "@wordpress/scripts": "^14.0.0",
+    "@wordpress/icons": "^10.0.0"
   },
   "scripts": {
     "prearchive": "rm -rf vendor && composer install --no-dev && composer dump-autoload -o",
@@ -41,7 +42,6 @@
     "npm": ">=6.14 <=8"
   },
   "dependencies": {
-    "antd": "^5.9.2",
     "dayjs": "^1.11.9"
   }
 }
