@@ -35,12 +35,16 @@ class WC_Facebook_Product {
 	const FB_VARIANT_IMAGE       = 'fb_image';
 	const FB_VISIBILITY          = 'fb_visibility';
 	const FB_REMOVE_FROM_SYNC    = 'fb_remove_from_sync';
+	const FB_RICH_TEXT_DESCRIPTION = 'fb_rich_text_description';
 
 	const MIN_DATE_1 = '1970-01-29';
 	const MIN_DATE_2 = '1970-01-30';
 	const MAX_DATE   = '2038-01-17';
 	const MAX_TIME   = 'T23:59+00:00';
 	const MIN_TIME   = 'T00:00+00:00';
+
+    public static $rich_text_description_source = WC_Facebookcommerce_Utils::WOO_DESCRIPTION;
+	
 
 	static $use_checkout_url = array(
 		'simple'    => 1,
@@ -88,6 +92,11 @@ class WC_Facebook_Product {
 	 */
 	public $fb_visibility;
 
+	/**
+	 * @var string Product rich text description.
+	 */
+	public $rich_text_description;
+
 	public function __construct( $wpid, $parent_product = null ) {
 
 		if ( $wpid instanceof WC_Product ) {
@@ -103,6 +112,7 @@ class WC_Facebook_Product {
 		$this->fb_use_parent_image    = null;
 		$this->main_description       = '';
 		$this->sync_short_description = \WC_Facebookcommerce_Integration::PRODUCT_DESCRIPTION_MODE_SHORT === facebook_for_woocommerce()->get_integration()->get_product_description_mode();
+		$this->rich_text_description  = '';
 
 		if ( $meta = get_post_meta( $this->id, self::FB_VISIBILITY, true ) ) {
 			$this->fb_visibility = wc_string_to_bool( $meta );
@@ -357,6 +367,13 @@ class WC_Facebook_Product {
 		}
 	}
 
+	public function set_rich_text_description( $rich_text_description ) {
+		$rich_text_description          = stripslashes(
+			WC_Facebookcommerce_Utils::clean_string( $rich_text_description, false )
+		);
+		$this->rich_text_description = $rich_text_description;
+	}
+
 	public function set_price( $price ) {
 		if ( is_numeric( $price ) ) {
 			update_post_meta(
@@ -445,6 +462,62 @@ class WC_Facebook_Product {
 		 * @param int     $id          WooCommerce Product ID.
 		 */
 		return apply_filters( 'facebook_for_woocommerce_fb_product_description', $description, $this->id );
+	}
+
+	public function get_rich_text_description() {
+		$rich_text_description = '';
+
+		if ( $this->fb_description ) {
+			$rich_text_description = $this->fb_description;
+		}
+
+		if ( $this->rich_text_description ) {
+			$rich_text_description = $this->rich_text_description;
+		}
+		
+		
+
+		if ( empty( $rich_text_description ) ) {
+			// Try to get description from post meta if fb description has been set
+			$rich_text_description = get_post_meta(
+				$this->id,
+				self::FB_PRODUCT_DESCRIPTION,
+				true
+			);
+			if ($rich_text_description){
+                self::$rich_text_description_source = WC_Facebookcommerce_Utils::FB_DESCRIPTION;
+            }
+		}
+
+		// For variable products, we want to use the rich text description of the variant.
+		// If that's not available, fall back to the main (parent) product's rich text description.
+		if (empty($rich_text_description) && WC_Facebookcommerce_Utils::is_variation_type($this->woo_product->get_type())) {
+			$rich_text_description = WC_Facebookcommerce_Utils::clean_string($this->woo_product->get_rich_text_description());
+
+			// If the variant's rich text description is still empty, use the main product's rich text description as a fallback.
+			if (empty($rich_text_description) && $this->main_description) {
+				$rich_text_description = $this->rich_text_description;
+			}
+		}
+
+		// If no description is found from meta or variation, get from post
+		if ( empty( $rich_text_description ) ) {
+			$post         = $this->get_post_data();
+			$post_content = WC_Facebookcommerce_Utils::clean_string( $post->post_content, false );
+			$post_excerpt = WC_Facebookcommerce_Utils::clean_string( $post->post_excerpt, false );
+
+			
+			if ( ! empty( $post_content ) ) {
+				$rich_text_description = $post_content;
+			}
+
+			if ( $this->sync_short_description || ( empty( $rich_text_description ) && ! empty( $post_excerpt ) ) ) {
+				$rich_text_description = $post_excerpt;
+			}
+
+		}
+		
+		return apply_filters( 'facebook_for_woocommerce_fb_rich_text_description', $rich_text_description, $this->id );
 	}
 
 	/**
@@ -652,8 +725,13 @@ class WC_Facebook_Product {
 			$brand = wp_strip_all_tags( WC_Facebookcommerce_Utils::get_store_name() );
 		}
 
+		$rich_text_description = $this->get_rich_text_description();
+		
+		print_r('source', self::$rich_text_description_source);
+
 		if ( self::PRODUCT_PREP_TYPE_ITEMS_BATCH === $type_to_prepare_for ) {
-			$product_data = array(
+			$product_data = array_merge(
+			array(
 				'title'                 => WC_Facebookcommerce_Utils::clean_string( $this->get_title() ),
 				'description'           => $this->get_fb_description(),
 				'image_link'            => $image_urls[0],
@@ -665,14 +743,17 @@ class WC_Facebook_Product {
 				'price'                 => $this->get_fb_price( true ),
 				'availability'          => $this->is_in_stock() ? 'in stock' : 'out of stock',
 				'visibility'            => Products::is_product_visible( $this->woo_product ) ? \WC_Facebookcommerce_Integration::FB_SHOP_PRODUCT_VISIBLE : \WC_Facebookcommerce_Integration::FB_SHOP_PRODUCT_HIDDEN,
-			);
+			),
+			self::$rich_text_description_source === WC_Facebookcommerce_Utils::WOO_DESCRIPTION ? array('rich_text_description' => $rich_text_description) : array()
+		);
 			$product_data   = $this->add_sale_price( $product_data, true );
 			$gpc_field_name = 'google_product_category';
 			if ( ! empty( $video_urls ) ) {
 				$product_data['video'] = $video_urls;
 			}
 		} else {
-			$product_data = array(
+			$product_data = array_merge(
+				array(
 				'name'                  => WC_Facebookcommerce_Utils::clean_string( $this->get_title() ),
 				'description'           => $this->get_fb_description(),
 				'image_url'             => $image_urls[0],
@@ -696,7 +777,9 @@ class WC_Facebook_Product {
 				'currency'              => get_woocommerce_currency(),
 				'availability'          => $this->is_in_stock() ? 'in stock' : 'out of stock',
 				'visibility'            => Products::is_product_visible( $this->woo_product ) ? \WC_Facebookcommerce_Integration::FB_SHOP_PRODUCT_VISIBLE : \WC_Facebookcommerce_Integration::FB_SHOP_PRODUCT_HIDDEN,
-			);
+			),
+			self::$rich_text_description_source === WC_Facebookcommerce_Utils::WOO_DESCRIPTION ? array('rich_text_description' => $rich_text_description) : array()
+		);
 
 			if ( self::PRODUCT_PREP_TYPE_NORMAL !== $type_to_prepare_for && ! empty( $video_urls ) ) {
 				$product_data['video'] = $video_urls;
