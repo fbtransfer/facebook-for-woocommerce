@@ -368,10 +368,14 @@ class WC_Facebook_Product {
 	}
 
 	public function set_rich_text_description( $rich_text_description ) {
-		$rich_text_description          = stripslashes(
-			WC_Facebookcommerce_Utils::clean_string( $rich_text_description, false )
-		);
+		$rich_text_description          = 
+			WC_Facebookcommerce_Utils::clean_string( $rich_text_description, false );
 		$this->rich_text_description = $rich_text_description;
+		update_post_meta(
+			$this->id,
+			self::FB_RICH_TEXT_DESCRIPTION,
+			$rich_text_description
+		);
 	}
 
 	public function set_price( $price ) {
@@ -481,7 +485,7 @@ class WC_Facebook_Product {
 			// Try to get description from post meta if fb description has been set
 			$rich_text_description = get_post_meta(
 				$this->id,
-				self::FB_PRODUCT_DESCRIPTION,
+				self::FB_RICH_TEXT_DESCRIPTION,
 				true
 			);
 			if ($rich_text_description){
@@ -727,7 +731,7 @@ class WC_Facebook_Product {
 
 		$rich_text_description = $this->get_rich_text_description();
 		
-		print_r('source', self::$rich_text_description_source);
+		// print_r('source', self::$rich_text_description_source);
 
 		if ( self::PRODUCT_PREP_TYPE_ITEMS_BATCH === $type_to_prepare_for ) {
 			$product_data = array_merge(
@@ -743,8 +747,9 @@ class WC_Facebook_Product {
 				'price'                 => $this->get_fb_price( true ),
 				'availability'          => $this->is_in_stock() ? 'in stock' : 'out of stock',
 				'visibility'            => Products::is_product_visible( $this->woo_product ) ? \WC_Facebookcommerce_Integration::FB_SHOP_PRODUCT_VISIBLE : \WC_Facebookcommerce_Integration::FB_SHOP_PRODUCT_HIDDEN,
+				'rich_text_description' => $rich_text_description
 			),
-			self::$rich_text_description_source === WC_Facebookcommerce_Utils::WOO_DESCRIPTION ? array('rich_text_description' => $rich_text_description) : array()
+			// self::$rich_text_description_source === WC_Facebookcommerce_Utils::WOO_DESCRIPTION ? array('rich_text_description' => $rich_text_description) : array('rich_text_description' => $rich_text_description)
 		);
 			$product_data   = $this->add_sale_price( $product_data, true );
 			$gpc_field_name = 'google_product_category';
