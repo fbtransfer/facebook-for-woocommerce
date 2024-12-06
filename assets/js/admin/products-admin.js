@@ -639,12 +639,12 @@ jQuery( document ).ready( function( $ ) {
 			$container.find( `.show-if-product-image-source-${imageSource}` ).closest( '.form-field' ).show();
 		} );
 
-		$( '.js-fb-product-image-source:checked:visible' ).trigger( 'change' );
+		$( '.js-fb-product-image-source:checked' ).trigger( 'change' );
 
 		// trigger settings fields modifiers when variations are loaded
 		$productData.on( 'woocommerce_variations_loaded', function() {
 			$( '.js-variable-fb-sync-toggle:visible' ).trigger( 'change' );
-			$( '.js-fb-product-image-source:checked:visible' ).trigger( 'change' );
+			$( '.js-fb-product-image-source:checked' ).trigger( 'change' );
 			$( '.variable_is_virtual:visible' ).trigger( 'change' );
 		} );
 

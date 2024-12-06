@@ -14,7 +14,6 @@ use Automattic\WooCommerce\Admin\Features\Features as WooAdminFeatures;
 use WooCommerce\Facebook\Admin\Settings_Screens;
 use WooCommerce\Facebook\Admin\Settings_Screens\Connection;
 use WooCommerce\Facebook\Framework\Helper;
-use WooCommerce\Facebook\Framework\Plugin\Compatibility;
 use WooCommerce\Facebook\Framework\Plugin\Exception as PluginException;
 
 defined( 'ABSPATH' ) || exit;
@@ -52,6 +51,8 @@ class Settings {
 		add_action( 'admin_menu', array( $this, 'add_menu_item' ) );
 		add_action( 'wp_loaded', array( $this, 'save' ) );
 		add_filter( 'parent_file', array( $this, 'set_parent_and_submenu_file' ) );
+
+		add_action( 'all_admin_notices', array( $this, 'add_tabs_to_product_sets_taxonomy' ) );
 	}
 
 	/**
@@ -191,19 +192,11 @@ class Settings {
 	 * @since 2.0.0
 	 */
 	public function render() {
-		$tabs        = $this->get_tabs();
-		$current_tab = Helper::get_requested_value( 'tab' );
-		if ( ! $current_tab ) {
-			$current_tab = current( array_keys( $tabs ) );
-		}
-		$screen = $this->get_screen( $current_tab );
+		$current_tab = $this->get_current_tab();
+		$screen      = $this->get_screen( $current_tab );
 		?>
 		<div class="wrap woocommerce">
-			<nav class="nav-tab-wrapper woo-nav-tab-wrapper">
-				<?php foreach ( $tabs as $id => $label ) : ?>
-					<a href="<?php echo esc_html( admin_url( 'admin.php?page=' . self::PAGE_ID . '&tab=' . esc_attr( $id ) ) ); ?>" class="nav-tab <?php echo $current_tab === $id ? 'nav-tab-active' : ''; ?>"><?php echo esc_html( $label ); ?></a>
-				<?php endforeach; ?>
-			</nav>
+			<?php $this->render_tabs( $current_tab ); ?>
 			<?php facebook_for_woocommerce()->get_message_handler()->show_messages(); ?>
 			<?php if ( $screen ) : ?>
 				<h1 class="screen-reader-text"><?php echo esc_html( $screen->get_title() ); ?></h1>
@@ -212,6 +205,40 @@ class Settings {
 			<?php endif; ?>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Render the Facebook for WooCommerce extension navigation tabs.
+	 *
+	 * @since 3.3.0
+	 *
+	 * @param string $current_tab The current tab ID.
+	 */
+	public function render_tabs( $current_tab ) {
+		$tabs = $this->get_tabs();
+		?>
+		<nav class="nav-tab-wrapper woo-nav-tab-wrapper facebook-for-woocommerce-tabs">
+			<?php foreach ( $tabs as $id => $label ) : ?>
+				<a href="<?php echo esc_html( admin_url( 'admin.php?page=' . self::PAGE_ID . '&tab=' . esc_attr( $id ) ) ); ?>" class="nav-tab <?php echo $current_tab === $id ? 'nav-tab-active' : ''; ?>"><?php echo esc_html( $label ); ?></a>
+			<?php endforeach; ?>
+		</nav>
+		<?php
+	}
+
+	/**
+	 * Get the current tab ID.
+	 *
+	 * @since 3.3.0
+	 *
+	 * @return string
+	 */
+	protected function get_current_tab() {
+		$tabs        = $this->get_tabs();
+		$current_tab = Helper::get_requested_value( 'tab' );
+		if ( ! $current_tab ) {
+			$current_tab = current( array_keys( $tabs ) );
+		}
+		return $current_tab;
 	}
 
 
@@ -311,5 +338,50 @@ class Settings {
 		 * @param array $tabs tab data, as $id => $label
 		 */
 		return (array) apply_filters( 'wc_facebook_admin_settings_tabs', $tabs, $this );
+	}
+
+	/**
+	 * Add the Facebook for WooCommerce tabs to the Facebook Product Set taxonomy page.
+	 * Renders the tabs (hidden by default) at the stop of the page,
+	 * then moves them to the correct DOM location with JavaScript and displays them.
+	 *
+	 * @since 3.3.0
+	 */
+	public function add_tabs_to_product_sets_taxonomy() {
+
+		// Only load this on the edit-tags.php page
+		$screen                  = get_current_screen();
+		$is_taxonomy_list_page   = 'edit-tags' === $screen->base;
+		$is_taxonomy_term_page   = 'term' === $screen->base;
+		$is_taxonomy_page        = $is_taxonomy_list_page || $is_taxonomy_term_page;
+		$is_product_set_taxonomy = 'fb_product_set' === $screen->taxonomy && $is_taxonomy_page;
+
+		if ( $is_product_set_taxonomy ) {
+			$this->render_tabs( Settings_Screens\Product_Sets::ID );
+			?>
+				<style>
+					.facebook-for-woocommerce-tabs {
+						margin: 30px 20px 0 20px;
+					}
+					#wpbody-content > .wrap > h1 {
+						font-size: 1.3em;
+						font-weight: 600;
+					}
+
+					@media (max-width: 782px) {
+						.facebook-for-woocommerce-tabs {
+								padding-top: 19px;
+								margin-bottom: -1px;
+						}
+						.edit-tags-php .facebook-for-woocommerce-tabs {
+							clear: both;
+							padding-top: 0;
+							position: relative;
+							top: -10px;
+							margin-bottom: -11px;
+						}
+				</style>
+			<?php
+		}
 	}
 }

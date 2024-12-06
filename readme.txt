@@ -2,8 +2,8 @@
 Contributors: facebook, automattic, woothemes
 Tags: facebook, woocommerce, marketing, product catalog feed, pixel
 Requires at least: 5.6
-Tested up to: 6.6
-Stable tag: 3.2.10
+Tested up to: 6.7
+Stable tag: 3.3.0
 Requires PHP: 7.4
 MySQL: 5.6 or greater
 License: GPLv2 or later
@@ -39,6 +39,12 @@ When opening a bug on GitHub, please give us as many details as possible.
 * Current version of Facebook-for-WooCommerce, WooCommerce, Wordpress, PHP
 
 == Changelog ==
+
+= 3.3.0 - 2024-11-07 =
+* Add - Extension navigation tabs on Product Sets screens.
+* Tweak - Tooltips, config labels, documentation links.
+* Tweak - WC 9.4 compatibility.
+* Tweak - WP 6.7 compatibility.
 
 = 3.2.10 - 2024-09-30 =
 * Update -  Remove Marketing Products Sets menu entry.

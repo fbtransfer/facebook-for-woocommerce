@@ -1,5 +1,11 @@
 *** Facebook for WooCommerce Changelog ***
 
+= 3.3.0 - 2024-11-07 =
+* Add - Extension navigation tabs on Product Sets screens.
+* Tweak - Tooltips, config labels, documentation links.
+* Tweak - WC 9.4 compatibility.
+* Tweak - WP 6.7 compatibility.
+
 = 3.2.10 - 2024-09-30 =
 * Update -  Remove Marketing Products Sets menu entry.
 
