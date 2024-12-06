@@ -392,7 +392,7 @@ class WC_Facebookcommerce extends WooCommerce\Facebook\Framework\Plugin {
 				// translators: No items found text
 				'not_found'                  => sprintf( esc_html__( 'No %s found.', 'facebook-for-woocommerce' ), $plural ),
 				// translators: Search label
-				'search_items'               => sprintf( esc_html__( 'Search %s.', 'facebook-for-woocommerce' ), $plural ),
+				'search_items'               => sprintf( esc_html__( 'Search %s', 'facebook-for-woocommerce' ), $plural ),
 				// translators: Text label
 				'separate_items_with_commas' => sprintf( esc_html__( 'Separate %s with commas', 'facebook-for-woocommerce' ), $plural ),
 				// translators: Text label

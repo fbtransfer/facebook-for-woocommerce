@@ -180,7 +180,7 @@ class Admin {
 					array(
 						'i18n' => array(
 							'top_level_dropdown_placeholder' => __( 'Search main categories...', 'facebook-for-woocommerce' ),
-							'second_level_empty_dropdown_placeholder' => __( 'Choose a main category', 'facebook-for-woocommerce' ),
+							'second_level_empty_dropdown_placeholder' => __( 'Choose a main category first', 'facebook-for-woocommerce' ),
 							'general_dropdown_placeholder'   => __( 'Choose a category', 'facebook-for-woocommerce' ),
 						),
 					)
@@ -1201,13 +1201,15 @@ class Admin {
 				woocommerce_wp_select(
 					array(
 						'id'      => 'wc_facebook_sync_mode',
-						'label'   => __( 'Facebook sync', 'facebook-for-woocommerce' ),
+						'label'   => __( 'Facebook Sync', 'facebook-for-woocommerce' ),
 						'options' => array(
 							self::SYNC_MODE_SYNC_AND_SHOW => __( 'Sync and show in catalog', 'facebook-for-woocommerce' ),
 							self::SYNC_MODE_SYNC_AND_HIDE => __( 'Sync and hide in catalog', 'facebook-for-woocommerce' ),
 							self::SYNC_MODE_SYNC_DISABLED => __( 'Do not sync', 'facebook-for-woocommerce' ),
 						),
-						'value'   => $sync_mode,
+						'value'       => $sync_mode,
+						'desc_tip'    => true,
+						'description' => __( 'Choose whether to sync this product to Facebook and, if synced, whether it should be visible in the catalog.', 'facebook-for-woocommerce' ),
 					)
 				);
 
@@ -1238,7 +1240,7 @@ class Admin {
 						'id'            => 'fb_product_image_source',
 						'label'         => __( 'Facebook Product Image', 'facebook-for-woocommerce' ),
 						'desc_tip'      => true,
-						'description'   => __( 'Choose the product image that should be synced to the Facebook catalog for this product. If using a custom image, please enter an absolute URL (e.g. https://domain.com/image.jpg).', 'facebook-for-woocommerce' ),
+						'description'   => __( 'Choose the product image that should be synced to the Facebook catalog and displayed for this product.', 'facebook-for-woocommerce' ),
 						'options'       => array(
 							Products::PRODUCT_IMAGE_SOURCE_PRODUCT => __( 'Use WooCommerce image', 'facebook-for-woocommerce' ),
 							Products::PRODUCT_IMAGE_SOURCE_CUSTOM  => __( 'Use custom image', 'facebook-for-woocommerce' ),
@@ -1255,6 +1257,8 @@ class Admin {
 						'label' => __( 'Custom Image URL', 'facebook-for-woocommerce' ),
 						'value' => $image,
 						'class' => sprintf( 'enable-if-sync-enabled product-image-source-field show-if-product-image-source-%s', Products::PRODUCT_IMAGE_SOURCE_CUSTOM ),
+						'desc_tip'      => true,
+						'description'   => __( 'Please enter an absolute URL (e.g. https://domain.com/image.jpg).', 'facebook-for-woocommerce' ),
 					)
 				);
 
@@ -1346,13 +1350,15 @@ class Admin {
 			array(
 				'id'            => "variable_facebook_sync_mode$index",
 				'name'          => "variable_facebook_sync_mode[$index]",
-				'label'         => __( 'Facebook sync', 'facebook-for-woocommerce' ),
+				'label'         => __( 'Facebook Sync', 'facebook-for-woocommerce' ),
 				'options'       => array(
 					self::SYNC_MODE_SYNC_AND_SHOW => __( 'Sync and show in catalog', 'facebook-for-woocommerce' ),
 					self::SYNC_MODE_SYNC_AND_HIDE => __( 'Sync and hide in catalog', 'facebook-for-woocommerce' ),
 					self::SYNC_MODE_SYNC_DISABLED => __( 'Do not sync', 'facebook-for-woocommerce' ),
 				),
 				'value'         => $sync_mode,
+				'desc_tip'    => true,
+				'description' => __( 'Choose whether to sync this product to Facebook and, if synced, whether it should be visible in the catalog.', 'facebook-for-woocommerce' ),
 				'class'         => 'js-variable-fb-sync-toggle',
 				'wrapper_class' => 'form-row form-row-full',
 			)
@@ -1386,7 +1392,7 @@ class Admin {
 				'name'          => "variable_fb_product_image_source[$index]",
 				'label'         => __( 'Facebook Product Image', 'facebook-for-woocommerce' ),
 				'desc_tip'      => true,
-				'description'   => __( 'Choose the product image that should be synced to the Facebook catalog for this product. If using a custom image, please enter an absolute URL (e.g. https://domain.com/image.jpg).', 'facebook-for-woocommerce' ),
+				'description'   => __( 'Choose the product image that should be synced to the Facebook catalog and displayed for this product.', 'facebook-for-woocommerce' ),
 				'options'       => array(
 					Products::PRODUCT_IMAGE_SOURCE_PRODUCT        => __( 'Use variation image', 'facebook-for-woocommerce' ),
 					Products::PRODUCT_IMAGE_SOURCE_PARENT_PRODUCT => __( 'Use parent image', 'facebook-for-woocommerce' ),
@@ -1406,6 +1412,8 @@ class Admin {
 				'value'         => $image_url,
 				'class'         => sprintf( 'enable-if-sync-enabled product-image-source-field show-if-product-image-source-%s', Products::PRODUCT_IMAGE_SOURCE_CUSTOM ),
 				'wrapper_class' => 'form-row form-row-full',
+				'desc_tip'      => true,
+				'description'   => __( 'Please enter an absolute URL (e.g. https://domain.com/image.jpg).', 'facebook-for-woocommerce' ),
 			)
 		);
 
