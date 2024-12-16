@@ -159,7 +159,8 @@ class Settings {
 			$crumbs = array(
 				__( 'Facebook for WooCommerce', 'facebook-for-woocommerce' ),
 			);
-			//phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+      //phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			if ( ! empty( $_GET['tab'] ) ) {
 				//phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				switch ( $_GET['tab'] ) {
@@ -174,6 +175,7 @@ class Settings {
 						break;
 				}
 			}
+
 			wc_admin_connect_page(
 				array(
 					'id'        => self::PAGE_ID,
