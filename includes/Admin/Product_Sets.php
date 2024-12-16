@@ -114,11 +114,11 @@ class Product_Sets {
 	 * @param int $term_id Term ID.
 	 * @param int $tt_id Term taxonomy ID.
 	 */
-	public function save_custom_field( $term_id, $tt_id ) {
+	public function save_custom_field( $term_id, $tt_id ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 		$wc_product_cats = empty( $_POST[ $this->categories_field ] ) ? '' : wc_clean( wp_unslash( $_POST[ $this->categories_field ] ) ); //phpcs:ignore
 		if ( ! empty( $wc_product_cats ) ) {
 			$wc_product_cats = array_map(
-				function( $item ) {
+				function ( $item ) {
 					return absint( $item );
 				},
 				$wc_product_cats
@@ -149,7 +149,12 @@ class Product_Sets {
 	 */
 	protected function get_field( $term_id = '' ) {
 		$saved_items  = get_term_meta( $term_id, $this->categories_field, true );
-		$product_cats = get_terms( 'product_cat', array( 'hide_empty' => 0 ) );
+		$product_cats = get_terms(
+			array(
+				'taxonomy'   => 'product_cat',
+				'hide_empty' => false,
+			)
+		);
 		?>
 		<div class="select2 updating-message"><p></p></div>
 		<select

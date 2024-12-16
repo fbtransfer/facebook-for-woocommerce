@@ -201,13 +201,17 @@ install_wc() {
     # Grab the necessary plugins.
     WC_TMPDIR="${TMPDIR}/woocommerce-${WC_VERSION}"
     rm -rf "${WC_TMPDIR}"
-    git clone --quiet --depth=1 --branch="${WC_VERSION}" https://github.com/woocommerce/woocommerce.git "${WC_TMPDIR}"
+    git clone --quiet --depth=1 --branch="$WC_VERSION" https://github.com/woocommerce/woocommerce.git "$WC_TMPDIR"
+
+    # Install composer for WooCommerce
+    cd "$WC_TMPDIR"/plugins/woocommerce
+    composer install --ignore-platform-reqs --no-interaction --no-dev
+
+  # Symlink woocommerce plugin
     mv "${WC_TMPDIR}"/plugins/woocommerce/* "$WC_DIR"
 	touch "$WC_VERSION_FILE"
 
-    # Install composer for WooCommerce
     cd "${WC_DIR}"
-    composer install --ignore-platform-reqs --no-interaction --no-dev
 
     # Generate feature config for WooCommerce
     GENERATE_FEATURE_CONFIG=bin/generate-feature-config.php

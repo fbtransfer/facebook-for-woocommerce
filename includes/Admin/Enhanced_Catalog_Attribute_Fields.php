@@ -89,20 +89,20 @@ class Enhanced_Catalog_Attribute_Fields {
 	public function render( $category_id ) {
 		$all_attributes             = $this->category_handler->get_attributes_with_fallback_to_parent_category( $category_id );
 		$all_attributes_with_values = array_map(
-			function( $attribute ) use ( $category_id ) {
+			function ( $attribute ) use ( $category_id ) {
 				return array_merge( $attribute, array( 'value' => $this->get_value( $attribute['key'], $category_id ) ) );
 			},
 			$all_attributes
 		);
 		$recommended_attributes     = array_filter(
 			$all_attributes_with_values,
-			function( $attr ) {
+			function ( $attr ) {
 				return $attr['recommended'];
 			}
 		);
 		$optional_attributes        = array_filter(
 			$all_attributes_with_values,
-			function( $attr ) {
+			function ( $attr ) {
 				return ! $attr['recommended'];
 			}
 		);
@@ -117,7 +117,7 @@ class Enhanced_Catalog_Attribute_Fields {
 					$this->extract_attribute( $optional_attributes, 'size' ),
 					$this->extract_attribute( $optional_attributes, 'gender' ),
 				),
-				function( $attr ) {
+				function ( $attr ) {
 					return ! is_null( $attr );
 				}
 			);
@@ -266,7 +266,6 @@ class Enhanced_Catalog_Attribute_Fields {
 				// string
 				$this->render_text_field( $attr_id, $attribute, $placeholder );
 		}
-
 	}
 
 	private function render_select_field( $attr_id, $attribute ) {

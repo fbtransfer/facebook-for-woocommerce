@@ -16,7 +16,7 @@
 		<exclude name="Squiz.Commenting.FileComment.Missing"/>
 
 		<!-- Rules related to comments. We will come back to implementing these rules-->
-		<exclude name="Generic.Arrays.DisallowShortArraySyntax.Found"/>
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax.Found"/>
 		<exclude name="Generic.Commenting.DocComment.MissingShort"/>
 		<exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
 		<exclude name="Squiz.Commenting.FunctionComment.Missing"/>
@@ -25,12 +25,24 @@
 		<exclude name="Squiz.Commenting.FileComment.MissingPackageTag"/>
 		<exclude name="WooCommerce.Commenting.CommentHooks.MissingSinceComment"/>
 		<exclude name="WooCommerce.Commenting.CommentHooks.MissingHookComment"/>
+
+		<!-- Exceptions can be escaped before outputting not when thrown -->
+		<exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
 	</rule>
 
 	<!-- Set the appropriate text domain. -->
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array" value="facebook-for-woocommerce"/>
+		</properties>
+	</rule>
+
+	<!-- Add manage_woocommerce to accepted user capabilities -->
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="manage_woocommerce"/>
+			</property>
 		</properties>
 	</rule>
 

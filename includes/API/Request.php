@@ -81,7 +81,7 @@ class Request extends JSONRequest {
 	 * @since 2.1.0
 	 */
 	public function mark_retry() {
-		$this->retry_count++;
+		++$this->retry_count;
 	}
 
 

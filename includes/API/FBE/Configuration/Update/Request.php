@@ -37,23 +37,6 @@ class Request extends Configuration\Request {
 
 
 	/**
-	 * Sets the messenger configuration.
-	 *
-	 * Only the enabled and domains values are able to accept updates right now.
-	 *
-	 * @since 2.0.0
-	 *
-	 * @param Configuration\Messenger $configuration messenger configuration object
-	 */
-	public function set_messenger_configuration( Configuration\Messenger $configuration ) {
-
-		$this->data['messenger_chat'] = array(
-			'enabled' => $configuration->is_enabled(),
-			'domains' => $configuration->get_domains(),
-		);
-	}
-
-	/**
 	 * Sets the plugin version for configuration update request.
 	 *
 	 * @since 3.0.10
@@ -69,6 +52,4 @@ class Request extends Configuration\Request {
 				),
 		);
 	}
-
-
 }

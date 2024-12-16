@@ -9,7 +9,6 @@
  * @package FacebookCommerce
  */
 
-require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/includes/fbutils.php';
 
 use Automattic\WooCommerce\Admin\Features\Features as WooAdminFeatures;
@@ -181,7 +180,6 @@ class WC_Facebookcommerce extends WooCommerce\Facebook\Framework\Plugin {
 			include_once 'facebook-commerce.php';
 
 			require_once __DIR__ . '/includes/fbproductfeed.php';
-			require_once __DIR__ . '/facebook-commerce-messenger-chat.php';
 
 			$this->heartbeat = new Heartbeat( WC()->queue() );
 			$this->heartbeat->init();
@@ -395,7 +393,7 @@ class WC_Facebookcommerce extends WooCommerce\Facebook\Framework\Plugin {
 				// translators: No items found text
 				'not_found'                  => sprintf( esc_html__( 'No %s found.', 'facebook-for-woocommerce' ), $plural ),
 				// translators: Search label
-				'search_items'               => sprintf( esc_html__( 'Search %s.', 'facebook-for-woocommerce' ), $plural ),
+				'search_items'               => sprintf( esc_html__( 'Search %s', 'facebook-for-woocommerce' ), $plural ),
 				// translators: Text label
 				'separate_items_with_commas' => sprintf( esc_html__( 'Separate %s with commas', 'facebook-for-woocommerce' ), $plural ),
 				// translators: Text label
@@ -725,7 +723,7 @@ class WC_Facebookcommerce extends WooCommerce\Facebook\Framework\Plugin {
 	 * @return string
 	 */
 	public function get_documentation_url() {
-		return 'https://docs.woocommerce.com/document/facebook-for-woocommerce/';
+		return 'https://woocommerce.com/document/facebook-for-woocommerce/';
 	}
 
 

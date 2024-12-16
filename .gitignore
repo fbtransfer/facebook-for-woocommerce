@@ -33,7 +33,7 @@ codeception.yml
 /assets/build
 
 # local dev configurations
-.wp-env.json
+.wp-env.override.json
 php.ini
 wp-config.php
 

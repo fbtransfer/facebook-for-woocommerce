@@ -189,6 +189,4 @@ class WC_Facebook_WPML_Injector {
 			<?php
 		}
 	}
-
-
 }

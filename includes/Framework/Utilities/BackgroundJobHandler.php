@@ -621,12 +621,12 @@ abstract class BackgroundJobHandler extends AsyncRequest {
 		$data_key = $this->data_key;
 
 		if ( ! isset( $job->{$data_key} ) ) {
-			/* translators: %s - string representing data key. */
+			/* translators: Placeholders: %s - user-friendly error message */
 			throw new \Exception( sprintf( __( 'Job data key "%s" not set', 'facebook-for-woocommerce' ), $data_key ) );
 		}
 
 		if ( ! is_array( $job->{$data_key} ) ) {
-			/* translators: %s - string representing data key. */
+			/* translators: Placeholders: %s - user-friendly error message */
 			throw new \Exception( sprintf( __( 'Job data key "%s" is not an array', 'facebook-for-woocommerce' ), $data_key ) );
 		}
 
@@ -656,8 +656,8 @@ abstract class BackgroundJobHandler extends AsyncRequest {
 				// process the item
 				$this->process_item( $item, $job );
 
-				$processed++;
-				$job->progress++;
+				++$processed;
+				++$job->progress;
 
 				// update job progress
 				$job = $this->update_job( $job );

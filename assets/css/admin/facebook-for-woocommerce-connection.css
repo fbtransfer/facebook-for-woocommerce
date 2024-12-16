@@ -53,6 +53,11 @@
 	background-image: url( '../../images/icon-2.png' );
 }
 
+#wc-facebook-connection-box .actions {
+	display: flex;
+	align-items: center;
+}
+
 #wc-facebook-connection-box .button {
 	color: rgb( 5, 5, 5 );
 	background-color: rgb( 228, 230, 235 );

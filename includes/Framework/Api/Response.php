@@ -30,5 +30,4 @@ interface Response {
 	 * @return string the request, safe for logging/displaying
 	 */
 	public function to_string_safe();
-
 }

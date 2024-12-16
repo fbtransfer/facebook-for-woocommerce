@@ -16,7 +16,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class ResetAllProductsFBSettings extends AbstractChainedJob {
 
-	use BatchQueryOffset, LoggingTrait;
+	use BatchQueryOffset;
+	use LoggingTrait;
 
 	/**
 	 * Called before starting the job.
@@ -57,7 +58,6 @@ class ResetAllProductsFBSettings extends AbstractChainedJob {
 		);
 
 		return array_map( 'intval', $products );
-
 	}
 
 	/**
@@ -116,5 +116,4 @@ class ResetAllProductsFBSettings extends AbstractChainedJob {
 	public function get_batch_size(): int {
 		return 25;
 	}
-
 }

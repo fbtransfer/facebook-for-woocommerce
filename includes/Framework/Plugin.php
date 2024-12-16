@@ -468,7 +468,7 @@ abstract class Plugin {
 				if ( isset( $rows[ $setting ]['expected'] ) && $values['expected'] < $rows[ $setting ]['expected'] ) {
 					continue;
 				}
-
+				/* translators: System Requirement %1$s - Actual value; %2$s - required value. */
 				$note = __( '%1$s - A minimum of %2$s is required.', 'facebook-for-woocommerce' );
 
 			} else {
@@ -477,7 +477,7 @@ abstract class Plugin {
 				if ( isset( $rows[ $setting ] ) ) {
 					continue;
 				}
-
+				/* translators: System Requirement %1$s - Actual value; %2$s - required value. */
 				$note = __( 'Set as %1$s - %2$s is required.', 'facebook-for-woocommerce' );
 			}
 

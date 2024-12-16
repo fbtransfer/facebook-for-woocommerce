@@ -60,6 +60,4 @@ class Request extends API\Request {
 
 		return array( 'fields' => 'id,product_group{id}' );
 	}
-
-
 }

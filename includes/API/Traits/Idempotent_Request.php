@@ -40,6 +40,4 @@ trait Idempotent_Request {
 
 		return $this->idempotency_key;
 	}
-
-
 }

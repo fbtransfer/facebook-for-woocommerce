@@ -54,6 +54,4 @@ class Request extends API\Request {
 
 		return 'ads_management';
 	}
-
-
 }

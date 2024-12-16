@@ -101,5 +101,4 @@ class Update {
 			return false;
 		}
 	}
-
 }

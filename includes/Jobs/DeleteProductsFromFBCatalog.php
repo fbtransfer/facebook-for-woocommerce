@@ -16,7 +16,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class DeleteProductsFromFBCatalog extends AbstractChainedJob {
 
-	use BatchQueryOffset, LoggingTrait;
+	use BatchQueryOffset;
+	use LoggingTrait;
 
 	/**
 	 * Called before starting the job.
@@ -57,7 +58,6 @@ class DeleteProductsFromFBCatalog extends AbstractChainedJob {
 		);
 
 		return array_map( 'intval', $products );
-
 	}
 
 	/**
@@ -125,5 +125,4 @@ class DeleteProductsFromFBCatalog extends AbstractChainedJob {
 	public function get_batch_size(): int {
 		return 25;
 	}
-
 }

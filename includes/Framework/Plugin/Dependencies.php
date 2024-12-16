@@ -174,7 +174,7 @@ class Dependencies {
 						$setting_message = '<code>' . $setting . ' = ' . $values['expected'] . '</code>';
 						if ( ! empty( $values['type'] ) && 'min' === $values['type'] ) {
 							$setting_message = sprintf(
-								/** translators: Placeholders: %s - a PHP setting value */
+								/* translators: Placeholders: %s - a PHP setting value */
 								__( '%s or higher', 'facebook-for-woocommerce' ),
 								$setting_message
 							);

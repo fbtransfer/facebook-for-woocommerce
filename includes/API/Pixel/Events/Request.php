@@ -90,6 +90,4 @@ class Request extends API\Request {
 		 */
 		return apply_filters( 'wc_facebook_api_pixel_event_request_data', $data, $this );
 	}
-
-
 }

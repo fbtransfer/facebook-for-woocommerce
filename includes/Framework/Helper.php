@@ -137,10 +137,10 @@ class Helper {
 	 * @return string
 	 */
 	public static function str_to_ascii( $string ) {
-		// strip ASCII chars 32 and under
-		$string = filter_var( $string, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_LOW );
-		// strip ASCII chars 127 and higher
-		return filter_var( $string, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_HIGH );
+		// Strip ASCII chars 32 and under
+		$string = preg_replace( '/[\x00-\x1F]/', '', $string );
+		// Strip ASCII chars 127 and higher
+		return preg_replace( '/[\x7F-\xFF]/', '', $string );
 	}
 
 

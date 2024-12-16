@@ -22,6 +22,18 @@ defined( 'ABSPATH' ) or exit;
  */
 class Lifecycle extends Framework\Lifecycle {
 
+	/** @var string the "enable messenger" setting ID */
+	const SETTING_ENABLE_MESSENGER = 'wc_facebook_enable_messenger';
+
+	/** @var string the messenger locale setting ID */
+	const SETTING_MESSENGER_LOCALE = 'wc_facebook_messenger_locale';
+
+	/** @var string the messenger greeting setting ID */
+	const SETTING_MESSENGER_GREETING = 'wc_facebook_messenger_greeting';
+
+	/** @var string the messenger color HEX setting ID */
+	const SETTING_MESSENGER_COLOR_HEX = 'wc_facebook_messenger_color_hex';
+
 
 	/**
 	 * Lifecycle constructor.
@@ -41,6 +53,7 @@ class Lifecycle extends Framework\Lifecycle {
 			'2.0.4',
 			'2.4.0',
 			'2.5.0',
+			'3.2.0'
 		);
 	}
 
@@ -118,10 +131,10 @@ class Lifecycle extends Framework\Lifecycle {
 			'fb_page_id'                                  => \WC_Facebookcommerce_Integration::SETTING_FACEBOOK_PAGE_ID,
 			'fb_pixel_id'                                 => \WC_Facebookcommerce_Integration::SETTING_FACEBOOK_PIXEL_ID,
 			'fb_pixel_use_pii'                            => \WC_Facebookcommerce_Integration::SETTING_ENABLE_ADVANCED_MATCHING,
-			'is_messenger_chat_plugin_enabled'            => \WC_Facebookcommerce_Integration::SETTING_ENABLE_MESSENGER,
-			'msger_chat_customization_locale'             => \WC_Facebookcommerce_Integration::SETTING_MESSENGER_LOCALE,
-			'msger_chat_customization_greeting_text_code' => \WC_Facebookcommerce_Integration::SETTING_MESSENGER_GREETING,
-			'msger_chat_customization_theme_color_code'   => \WC_Facebookcommerce_Integration::SETTING_MESSENGER_COLOR_HEX,
+			'is_messenger_chat_plugin_enabled'            => self::SETTING_ENABLE_MESSENGER,
+			'msger_chat_customization_locale'             => self::SETTING_MESSENGER_LOCALE,
+			'msger_chat_customization_greeting_text_code' => self::SETTING_MESSENGER_GREETING,
+			'msger_chat_customization_theme_color_code'   => self::SETTING_MESSENGER_COLOR_HEX,
 		);
 
 		foreach ( $settings as $old_index => $new_index ) {
@@ -207,10 +220,10 @@ class Lifecycle extends Framework\Lifecycle {
 				'excluded_product_category_ids' => \WC_Facebookcommerce_Integration::SETTING_EXCLUDED_PRODUCT_CATEGORY_IDS,
 				'excluded_product_tag_ids'      => \WC_Facebookcommerce_Integration::SETTING_EXCLUDED_PRODUCT_TAG_IDS,
 				'product_description_mode'      => \WC_Facebookcommerce_Integration::SETTING_PRODUCT_DESCRIPTION_MODE,
-				'enable_messenger'              => \WC_Facebookcommerce_Integration::SETTING_ENABLE_MESSENGER,
-				'messenger_locale'              => \WC_Facebookcommerce_Integration::SETTING_MESSENGER_LOCALE,
-				'messenger_greeting'            => \WC_Facebookcommerce_Integration::SETTING_MESSENGER_GREETING,
-				'messenger_color_hex'           => \WC_Facebookcommerce_Integration::SETTING_MESSENGER_COLOR_HEX,
+				'enable_messenger'              => self::SETTING_ENABLE_MESSENGER,
+				'messenger_locale'              => self::SETTING_MESSENGER_LOCALE,
+				'messenger_greeting'            => self::SETTING_MESSENGER_GREETING,
+				'messenger_color_hex'           => self::SETTING_MESSENGER_COLOR_HEX,
 				'enable_debug_mode'             => \WC_Facebookcommerce_Integration::SETTING_ENABLE_DEBUG_MODE,
 			);
 			foreach ( $settings_map as $old_name => $new_name ) {
@@ -307,4 +320,25 @@ class Lifecycle extends Framework\Lifecycle {
 		 */
 		as_unschedule_all_actions( Products\Feed::GENERATE_FEED_ACTION );
 	}
+
+	/**
+	 * Removes the messenger settings and deprecation notice on upgrade to 3.2.0.
+	 * Note: deprecation notice upgrade step removed in 3.2.1.
+	 *
+	 * @since 3.2.0
+	 */
+	protected function upgrade_to_3_2_0() {
+		// Remove the Messenger deprecation notice.
+		$notice_slug = 'facebook_messenger_deprecation_warning';
+		if( class_exists( 'WC_Admin_Notices' ) && \WC_Admin_Notices::has_notice( $notice_slug ) ) {
+			\WC_Admin_Notices::remove_notice( $notice_slug );
+		}
+
+		// Delete all messenger options
+		delete_option( self::SETTING_ENABLE_MESSENGER );
+		delete_option( self::SETTING_MESSENGER_LOCALE );
+		delete_option( self::SETTING_MESSENGER_GREETING );
+		delete_option( self::SETTING_MESSENGER_COLOR_HEX );
+	}
+
 }

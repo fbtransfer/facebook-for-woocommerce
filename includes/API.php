@@ -547,22 +547,6 @@ class API extends Base {
 		return $this->perform_request( $request );
 	}
 
-
-	/**
-	 * Updates the messenger configuration.
-	 *
-	 * @param string                          $external_business_id external business ID
-	 * @param API\FBE\Configuration\Messenger $configuration messenger configuration
-	 * @return API\Response|API\FBE\Configuration\Update\Response
-	 * @throws ApiException
-	 */
-	public function update_messenger_configuration( string $external_business_id, API\FBE\Configuration\Messenger $configuration ): API\FBE\Configuration\Update\Response {
-		$request = new API\FBE\Configuration\Update\Request( $external_business_id );
-		$request->set_messenger_configuration( $configuration );
-		$this->set_response_handler( API\FBE\Configuration\Update\Response::class );
-		return $this->perform_request( $request );
-	}
-
 	/**
 	 * Updates the plugin version configuration.
 	 *

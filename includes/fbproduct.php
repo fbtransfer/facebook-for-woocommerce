@@ -11,6 +11,7 @@
 
 require_once __DIR__ . '/fbutils.php';
 
+use WooCommerce\Facebook\Framework\Plugin\Compatibility;
 use WooCommerce\Facebook\Framework\Helper;
 use WooCommerce\Facebook\Products;
 
@@ -277,6 +278,35 @@ class WC_Facebook_Product {
 		return $image_urls;
 	}
 
+	/**
+	 * Gets a list of video URLs to use for this product in Facebook sync.
+	 *
+	 * @return array
+	 */
+	public function get_all_video_urls() {
+
+		$video_urls = array();
+
+		$attached_videos = get_attached_media( 'video', $this->id );
+		if ( empty( $attached_videos ) ) {
+			return $video_urls;
+		}
+		foreach ( $attached_videos as $video ) {
+			$url = wp_get_attachment_url( $video->ID );
+			if ( $url ) {
+				array_push(
+					$video_urls,
+					array(
+						'url' => $url,
+					)
+				);
+			}
+        }
+
+		return $video_urls;
+	}
+
+
 
 	/**
 	 * Gets the list of additional image URLs for the product from the complete list of image URLs.
@@ -362,56 +392,60 @@ class WC_Facebook_Product {
 	}
 
 	public function get_fb_description() {
+		$description = '';
+
 		if ( $this->fb_description ) {
-			return $this->fb_description;
+			$description = $this->fb_description;
 		}
 
-		$description = get_post_meta(
-			$this->id,
-			self::FB_PRODUCT_DESCRIPTION,
-			true
-		);
-
-		if ( $description ) {
-			return $description;
+		if ( empty( $description ) ) {
+			// Try to get description from post meta
+			$description = get_post_meta(
+				$this->id,
+				self::FB_PRODUCT_DESCRIPTION,
+				true
+			);
 		}
 
-		if ( WC_Facebookcommerce_Utils::is_variation_type( $this->woo_product->get_type() ) ) {
-
+		// Check if the product type is a variation and no description is found yet
+		if ( empty( $description ) && WC_Facebookcommerce_Utils::is_variation_type( $this->woo_product->get_type() ) ) {
 			$description = WC_Facebookcommerce_Utils::clean_string( $this->woo_product->get_description() );
 
-			if ( $description ) {
-				return $description;
-			}
-			if ( $this->main_description ) {
-				return $this->main_description;
+			// Fallback to main description
+			if ( empty( $description ) && $this->main_description ) {
+				$description = $this->main_description;
 			}
 		}
 
-		$post = $this->get_post_data();
+		// If no description is found from meta or variation, get from post
+		if ( empty( $description ) ) {
+			$post         = $this->get_post_data();
+			$post_content = WC_Facebookcommerce_Utils::clean_string( $post->post_content );
+			$post_excerpt = WC_Facebookcommerce_Utils::clean_string( $post->post_excerpt );
+			$post_title   = WC_Facebookcommerce_Utils::clean_string( $post->post_title );
 
-		$post_content = WC_Facebookcommerce_Utils::clean_string(
-			$post->post_content
-		);
-		$post_excerpt = WC_Facebookcommerce_Utils::clean_string(
-			$post->post_excerpt
-		);
-		$post_title   = WC_Facebookcommerce_Utils::clean_string(
-			$post->post_title
-		);
+			// Prioritize content, then excerpt, then title
+			if ( ! empty( $post_content ) ) {
+				$description = $post_content;
+			}
 
-		// Sanitize description
-		if ( $post_content ) {
-			$description = $post_content;
-		}
-		if ( $this->sync_short_description || ( $description == '' && $post_excerpt ) ) {
-			$description = $post_excerpt;
-		}
-		if ( $description == '' ) {
-			$description = $post_title;
-		}
+			if ( $this->sync_short_description || ( empty( $description ) && ! empty( $post_excerpt ) ) ) {
+				$description = $post_excerpt;
+			}
 
-		return $description;
+			if ( empty( $description ) ) {
+				$description = $post_title;
+			}
+		}
+		/**
+		 * Filters the FB product description.
+		 *
+		 * @since 3.2.6
+		 *
+		 * @param string  $description Facebook product description.
+		 * @param int     $id          WooCommerce Product ID.
+		 */
+		return apply_filters( 'facebook_for_woocommerce_fb_product_description', $description, $this->id );
 	}
 
 	/**
@@ -424,22 +458,31 @@ class WC_Facebook_Product {
 
 		$sale_price = $this->woo_product->get_sale_price();
 		$sale_price_effective_date = '';
-
-		$sale_start =
-			( $date     = $this->woo_product->get_date_on_sale_from() )
-				? date_i18n( WC_DateTime::ATOM, $date->getOffsetTimestamp() )
-				: self::MIN_DATE_1 . self::MIN_TIME;
-
-		$sale_end =
-			( $date   = $this->woo_product->get_date_on_sale_to() )
-				? date_i18n( WC_DateTime::ATOM, $date->getOffsetTimestamp() )
-				: self::MAX_DATE . self::MAX_TIME;
+		$sale_start = '';
+		$sale_end = '';
 
 		// check if sale exist
 		if ( is_numeric( $sale_price ) && $sale_price > 0 ) {
-			$sale_price_effective_date = $sale_start . '/' . $sale_end;
-			$sale_price =
+			$sale_start =
+				( $date     = $this->woo_product->get_date_on_sale_from() )
+					? date_i18n( WC_DateTime::ATOM, $date->getOffsetTimestamp() )
+					: self::MIN_DATE_1 . self::MIN_TIME;
+			$sale_end =
+				( $date   = $this->woo_product->get_date_on_sale_to() )
+					? date_i18n( WC_DateTime::ATOM, $date->getOffsetTimestamp() )
+					: self::MAX_DATE . self::MAX_TIME;
+			$sale_price_effective_date =
+				( $sale_start == self::MIN_DATE_1 . self::MIN_TIME && $sale_end == self::MAX_DATE . self::MAX_TIME )
+				? ''
+				: $sale_start . '/' . $sale_end;
+				$sale_price =
 				intval( round( $this->get_price_plus_tax( $sale_price ) * 100 ) );
+
+			// Set Sale start and end as empty if set to default values
+			if ( $sale_start == self::MIN_DATE_1 . self::MIN_TIME && $sale_end == self::MAX_DATE . self::MAX_TIME ) {
+				$sale_start = '';
+				$sale_end   = '';
+			}
 		}
 
 		// check if sale is expired and sale time range is valid
@@ -591,6 +634,8 @@ class WC_Facebook_Product {
 		}
 		$image_urls = $this->get_all_image_urls();
 
+		$video_urls = $this->get_all_video_urls();
+
 		// Replace WordPress sanitization's ampersand with a real ampersand.
 		$product_url = str_replace(
 			'&amp%3B',
@@ -633,6 +678,9 @@ class WC_Facebook_Product {
 			);
 			$product_data   = $this->add_sale_price( $product_data, true );
 			$gpc_field_name = 'google_product_category';
+			if ( ! empty( $video_urls ) ) {
+				$product_data['video'] = $video_urls;
+			}
 		} else {
 			$product_data = array(
 				'name'                  => WC_Facebookcommerce_Utils::clean_string( $this->get_title() ),
@@ -659,6 +707,10 @@ class WC_Facebook_Product {
 				'availability'          => $this->is_in_stock() ? 'in stock' : 'out of stock',
 				'visibility'            => Products::is_product_visible( $this->woo_product ) ? \WC_Facebookcommerce_Integration::FB_SHOP_PRODUCT_VISIBLE : \WC_Facebookcommerce_Integration::FB_SHOP_PRODUCT_HIDDEN,
 			);
+
+			if ( self::PRODUCT_PREP_TYPE_NORMAL !== $type_to_prepare_for && ! empty( $video_urls ) ) {
+				$product_data['video'] = $video_urls;
+			}
 			$product_data   = $this->add_sale_price( $product_data );
 			$gpc_field_name = 'category';
 		}//end if
@@ -673,9 +725,20 @@ class WC_Facebook_Product {
 			$product_data = $this->apply_enhanced_catalog_fields_from_attributes( $product_data, $google_product_category );
 		}
 
-		// add the Commerce values (only stock quantity for the moment)
-		if ( Products::is_product_ready_for_commerce( $this->woo_product ) ) {
+		// Add stock quantity if the product or variant is stock managed.
+		// In case if variant is not stock managed but parent is, fallback on parent value.
+		if ( $this->woo_product->managing_stock() ) {
 			$product_data['quantity_to_sell_on_facebook'] = (int) max( 0, $this->woo_product->get_stock_quantity() );
+		} else if ( $this->woo_product->is_type( 'variation' ) ) {
+			$parent_product = wc_get_product( $this->woo_product->get_parent_id() );
+			if ( $parent_product && $parent_product->managing_stock() ) {	
+				$product_data['quantity_to_sell_on_facebook'] = (int) max( 0, $parent_product->get_stock_quantity() );
+			}
+		}
+
+		// Add GTIN (Global Trade Item Number)
+		if ( Compatibility::is_wc_version_gte( '9.1.0' ) && $gtin = $this->woo_product->get_global_unique_id() ) {
+			$product_data['gtin'] = $gtin;
 		}
 
 		// Only use checkout URLs if they exist.

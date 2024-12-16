@@ -2,7 +2,6 @@
 declare( strict_types=1 );
 
 use WooCommerce\Facebook\API;
-use WooCommerce\Facebook\API\FBE\Configuration\Messenger;
 use WooCommerce\Facebook\Framework\Api\Exception as ApiException;
 
 /**
@@ -208,7 +207,7 @@ class ApiTest extends WP_UnitTestCase {
 			$this->assertEquals( 'GET', $parsed_args['method'] );
 			$this->assertEquals( "{$this->endpoint}{$this->version}/fbe_business?fbe_external_business_id={$external_business_id}", $url );
 			return [
-				'body'     => '{"business":{"name":"WordPress-Facebook"},"catalogs":[{"feature_instance_id":"562415265365817","enabled":true}],"catalog_feed_scheduled":{"enabled":false},"fb_shops":[{"feature_instance_id":"554457382898066","enabled":true}],"ig_cta":{"enabled":false},"ig_shopping":{"enabled":false},"messenger_chat":{"enabled":false},"messenger_chats":[{"enabled":false}],"messenger_menu":{"enabled":false},"page_card":{"enabled":false},"page_cta":{"enabled":false},"page_post":{"enabled":false},"page_shop":{"enabled":false},"pixels":[{"feature_instance_id":"762898101511280","enabled":true}],"thread_intent":{"enabled":false}}',
+				'body'     => '{"business":{"name":"WordPress-Facebook"},"catalogs":[{"feature_instance_id":"562415265365817","enabled":true}],"catalog_feed_scheduled":{"enabled":false},"fb_shops":[{"feature_instance_id":"554457382898066","enabled":true}],"ig_cta":{"enabled":false},"ig_shopping":{"enabled":false},"page_card":{"enabled":false},"page_cta":{"enabled":false},"page_post":{"enabled":false},"page_shop":{"enabled":false},"pixels":[{"feature_instance_id":"762898101511280","enabled":true}],"thread_intent":{"enabled":false}}',
 				'response' => [
 					'code'    => 200,
 					'message' => 'OK',
@@ -219,46 +218,8 @@ class ApiTest extends WP_UnitTestCase {
 
 		$response = $this->api->get_business_configuration( $external_business_id );
 
-		$configuration = $response->get_messenger_configuration();
-
-		$this->assertFalse( $configuration->is_enabled() );
 		$this->assertFalse( $response->is_ig_shopping_enabled() );
 		$this->assertFalse( $response->is_ig_cta_enabled() );
-	}
-
-	/**
-	 * Tests update messenger configuration sends data to Facebook.
-	 *
-	 * @return void
-	 * @throws ApiException In case of network request error.
-	 */
-	public function test_update_messenger_configuration_sends_message_configuration_update_request() {
-		$external_business_id = 'wordpress-facebook-62c3f1add134a';
-		$configuration        = new Messenger(
-			[
-				'enabled'        => true,
-				'default_locale' => '',
-				'domains'        => [ 'https://wordpress-facebook.ddev.site/' ],
-			]
-		);
-
-		$response = function( $result, $parsed_args, $url ) use ( $external_business_id ) {
-			$this->assertEquals( 'POST', $parsed_args['method'] );
-			$this->assertEquals( "{$this->endpoint}{$this->version}/fbe_business?fbe_external_business_id={$external_business_id}", $url );
-			$this->assertEquals( '{"fbe_external_business_id":"' . $external_business_id . '","messenger_chat":{"enabled":true,"domains":["https:\/\/wordpress-facebook.ddev.site\/"]}}', $parsed_args['body'] );
-			return [
-				'body'     => '{"success":true}',
-				'response' => [
-					'code'    => 200,
-					'message' => 'OK',
-				],
-			];
-		};
-		add_filter( 'pre_http_request', $response, 10, 3 );
-
-		$response = $this->api->update_messenger_configuration( $external_business_id, $configuration );
-
-		$this->assertTrue( $response->success );
 	}
 
 	/**

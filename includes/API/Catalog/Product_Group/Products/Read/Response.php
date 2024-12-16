@@ -42,6 +42,4 @@ class Response extends API\Response {
 
 		return $product_item_ids;
 	}
-
-
 }

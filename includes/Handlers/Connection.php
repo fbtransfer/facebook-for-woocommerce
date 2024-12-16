@@ -34,19 +34,23 @@ class Connection {
 	const OAUTH_URL = 'https://facebook.com/dialog/oauth';
 
 	/** @var string WooCommerce connection proxy URL */
-	const PROXY_URL = 'https://connect.woocommerce.com/auth/facebook/';
+	const PROXY_URL = 'https://api.woocommerce.com/integrations/v2/auth/facebook/';
+
+	const PROXY_TOKEN_EXCHANGE_URL = 'https://api.woocommerce.com/integrations/v2/exchange/facebook/';
 
 	/** @var string WooCommerce connection for APP Store login URL */
-	const APP_STORE_LOGIN_URL = 'https://connect.woocommerce.com/app-store-login/facebook/';
+	const APP_STORE_LOGIN_URL = 'https://api.woocommerce.com/integrations/app-store-login/facebook/';
 
 	/** @var string WooCommerce connection authentication URL */
-	const CONNECTION_AUTHENTICATION_URL = 'https://connect.woocommerce.com/auth/facebookcommerce/';
+	const CONNECTION_AUTHENTICATION_URL = 'https://api.woocommerce.com/integrations/auth/facebookcommerce/';
 
 	/** @var string the Standard Auth type */
 	const AUTH_TYPE_STANDARD = 'standard';
 
 	/** @var string the action callback for the connection */
 	const ACTION_CONNECT = 'wc_facebook_connect';
+
+	const ACTION_EXCHANGE = 'wc_facebook_exchange';
 
 	/** @var string the action callback for the disconnection */
 	const ACTION_DISCONNECT = 'wc_facebook_disconnect';
@@ -246,14 +250,58 @@ class Connection {
 			if ( empty( $_GET['nonce'] ) || ! wp_verify_nonce( sanitize_key( wp_unslash( $_GET['nonce'] ) ), self::ACTION_CONNECT ) ) {
 				throw new ApiException( 'Invalid nonce' );
 			}
-			$is_error                 = ! empty( $_GET['err'] ) ? true : false;
-			$error_code               = ! empty( $_GET['err_code'] ) ? stripslashes( wc_clean( wp_unslash( $_GET['err_code'] ) ) ) : '';
-			$merchant_access_token    = ! empty( $_GET['merchant_access_token'] ) ? wc_clean( wp_unslash( $_GET['merchant_access_token'] ) ) : '';
-			$system_user_access_token = ! empty( $_GET['system_user_access_token'] ) ? wc_clean( wp_unslash( $_GET['system_user_access_token'] ) ) : '';
-			$system_user_id           = ! empty( $_GET['system_user_id'] ) ? wc_clean( wp_unslash( $_GET['system_user_id'] ) ) : '';
+
+			$is_error   = ! empty( $_GET['err'] );
+			$error_code = ! empty( $_GET['err_code'] ) ? stripslashes( wc_clean( wp_unslash( $_GET['err_code'] ) ) ) : '';
 			if ( $is_error && $error_code ) {
 				throw new ConnectApiException( $error_code );
 			}
+
+			$facebook_auth_code = $_GET['code'] ?? '';
+			if ( empty( $facebook_auth_code ) ) {
+				throw new ApiException( 'Facebook auth code is missing.' );
+			}
+
+			$state = $_GET['state'] ?? '';
+			if ( empty( $state ) ) {
+				throw new ApiException( 'Missing state query parameter.' );
+			}
+
+			$parameters_string = '?' . http_build_query( array(
+					'nonce'                => wp_create_nonce( self::ACTION_EXCHANGE ),
+					'code'                 => $facebook_auth_code,
+					'external_business_id' => $this->get_external_business_id(),
+					'type'                 => self::AUTH_TYPE_STANDARD,
+					'state'                => $state,
+				) );
+
+			$request_url = self::PROXY_TOKEN_EXCHANGE_URL . $parameters_string;
+			$response    = wp_safe_remote_get(
+				$request_url,
+				array(
+					'timeout' => 60,
+				)
+			);
+
+			if ( is_wp_error( $response ) ) {
+				throw new ApiException( 'WooCommerce Connect Server token exchange has failed.' );
+			}
+
+			$token_data = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			if ( isset( $token_data[ 'status' ] ) && $token_data[ 'status' ] === 500 ) {
+				throw new ApiException( 'WooCommerce Connect Server token exchange has failed.' );
+			}
+
+			// Check that request was initiated from the server.
+			if ( ! wp_verify_nonce( $token_data['nonce'] ?? '', self::ACTION_EXCHANGE ) ) {
+				throw new ApiException( 'Exchange nonce is not valid.' );
+			}
+
+			$merchant_access_token    = wc_clean( wp_unslash( $token_data['merchant_access_token']    ?? '' ) ) ;
+			$system_user_access_token = wc_clean( wp_unslash( $token_data['system_user_access_token'] ?? '' ) ) ;
+			$system_user_id           = wc_clean( wp_unslash( $token_data['system_user_id']           ?? '' ) ) ;
+
 			if ( ! $merchant_access_token ) {
 				throw new ApiException( 'Access token is missing' );
 			}
@@ -902,15 +950,6 @@ class Connection {
 		);
 		if ( $external_merchant_settings_id = facebook_for_woocommerce()->get_integration()->get_external_merchant_settings_id() ) {
 			$parameters['setup']['merchant_settings_id'] = $external_merchant_settings_id;
-		}
-		// if messenger was previously enabled
-		if ( facebook_for_woocommerce()->get_integration()->is_messenger_enabled() ) {
-			$parameters['business_config']['messenger_chat'] = array(
-				'enabled' => true,
-				'domains' => array(
-					home_url( '/' ),
-				),
-			);
 		}
 		return $parameters;
 	}

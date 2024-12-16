@@ -161,10 +161,8 @@ class WC_Facebookcommerce_Pixel {
 				fbq( 'track', 'PageView', <?php echo json_encode( self::build_params( [], 'PageView' ), JSON_PRETTY_PRINT | JSON_FORCE_OBJECT ); ?> );
 
 				document.addEventListener( 'DOMContentLoaded', function() {
-					jQuery && jQuery( function( $ ) {
-						// Insert placeholder for events injected when a product is added to the cart through AJAX.
-						$( document.body ).append( '<div class=\"wc-facebook-pixel-event-placeholder\"></div>' );
-					} );
+					// Insert placeholder for events injected when a product is added to the cart through AJAX.
+					document.body.insertAdjacentHTML( 'beforeend', '<div class=\"wc-facebook-pixel-event-placeholder\"></div>' );
 				}, false );
 
 			</script>
@@ -285,14 +283,21 @@ class WC_Facebookcommerce_Pixel {
 		 * @param string $method     Name of the pixel's fbq() function to call.
 		 */
 		public function inject_event( $event_name, $params, $method = 'track' ) {
+			if ( WC_Facebookcommerce_Utils::isWoocommerceIntegration() ) {
+				$code = $this->get_event_code( $event_name, self::build_params( $params, $event_name ), $method );
 
-			if ( \WC_Facebookcommerce_Utils::isWoocommerceIntegration() ) {
-				\WC_Facebookcommerce_Utils::wc_enqueue_js( $this->get_event_code( $event_name, self::build_params( $params, $event_name ), $method ) );
+				// If we have add to cart redirect enabled, we must defer the AddToCart events to render them the next page load.
+				$is_redirect    = 'yes' === get_option( 'woocommerce_cart_redirect_after_add', 'no' );
+				$is_add_to_cart = 'AddToCart' === $event_name;
+				if ( $is_redirect && $is_add_to_cart ) {
+					WC_Facebookcommerce_Utils::add_deferred_event( $code );
+				} else {
+					WC_Facebookcommerce_Utils::wc_enqueue_js( $code );
+				}
 			} else {
 				printf( $this->get_event_script( $event_name, self::build_params( $params, $event_name ), $method ) ); // phpcs:ignore WordPress.XSS.EscapeOutput.OutputNotEscaped
 			}
 		}
-
 
 		/**
 		 * Gets the JavaScript code to track a conditional event wrapped in <script> tag.

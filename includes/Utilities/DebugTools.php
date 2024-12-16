@@ -78,7 +78,6 @@ class DebugTools {
 		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '%wc_facebook_background_product_sync%'" );
 
 		return __( 'Background sync jobs have been deleted.', 'facebook-for-woocommerce' );
-
 	}
 
 	/**
@@ -93,7 +92,6 @@ class DebugTools {
 		facebook_for_woocommerce()->get_connection_handler()->disconnect();
 
 		return esc_html__( 'Cleared all Facebook settings!', 'facebook-for-woocommerce' );
-
 	}
 
 	/**
@@ -106,7 +104,6 @@ class DebugTools {
 	public function reset_all_product_fb_settings() {
 		facebook_for_woocommerce()->job_manager->reset_all_product_fb_settings->queue_start();
 		return esc_html__( 'Reset products Facebook settings job started!', 'facebook-for-woocommerce' );
-
 	}
 
 	/**
@@ -120,5 +117,4 @@ class DebugTools {
 		facebook_for_woocommerce()->job_manager->delete_all_products->queue_start();
 		return esc_html__( 'Delete products from Facebook catalog job started!', 'facebook-for-woocommerce' );
 	}
-
 }

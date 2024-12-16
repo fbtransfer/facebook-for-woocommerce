@@ -57,5 +57,4 @@ class CleanupSkyvergeFrameworkJobOptions {
 			LIMIT 500"
 		);
 	}
-
 }

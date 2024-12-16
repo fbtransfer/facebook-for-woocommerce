@@ -16,6 +16,7 @@ use WooCommerce\Facebook\Framework\Helper;
 use WooCommerce\Facebook\Framework\Plugin\Exception as PluginException;
 use WooCommerce\Facebook\Products;
 use WooCommerce\Facebook\Products\Feed;
+use WooCommerce\Facebook\Products\Sync;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -90,18 +91,6 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 
 	/** @var string the scheduled resync offset setting ID */
 	const SETTING_SCHEDULED_RESYNC_OFFSET = 'scheduled_resync_offset';
-
-	/** @var string the "enable messenger" setting ID */
-	const SETTING_ENABLE_MESSENGER = 'wc_facebook_enable_messenger';
-
-	/** @var string the messenger locale setting ID */
-	const SETTING_MESSENGER_LOCALE = 'wc_facebook_messenger_locale';
-
-	/** @var string the messenger greeting setting ID */
-	const SETTING_MESSENGER_GREETING = 'wc_facebook_messenger_greeting';
-
-	/** @var string the messenger color HEX setting ID */
-	const SETTING_MESSENGER_COLOR_HEX = 'wc_facebook_messenger_color_hex';
 
 	/** @var string the "debug mode" setting ID */
 	const SETTING_ENABLE_DEBUG_MODE = 'wc_facebook_enable_debug_mode';
@@ -190,11 +179,11 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 	/** @var WC_Facebookcommerce_EventsTracker instance. */
 	private $events_tracker;
 
-	/** @var WC_Facebookcommerce_MessengerChat instance. */
-	private $messenger_chat;
-
 	/** @var WC_Facebookcommerce_Background_Process instance. */
 	private $background_processor;
+
+	/** @var WC_Facebook_Product_Feed instance. */
+	private $fbproductfeed;
 
 	/**
 	 * Init and hook in the integration.
@@ -320,6 +309,8 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 
 				add_action( 'add_meta_boxes', 'WooCommerce\Facebook\Admin\Product_Sync_Meta_Box::register', 10, 1 );
 
+				add_action( 'add_meta_boxes_product', [ $this, 'display_batch_api_completed' ], 10, 2 );
+
 				add_action(
 					'wp_ajax_ajax_fb_toggle_visibility',
 					array( $this, 'ajax_fb_toggle_visibility' )
@@ -360,14 +351,6 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 			$this->events_tracker = new WC_Facebookcommerce_EventsTracker( $user_info, $aam_settings );
 		}
 
-		// Initialize the messenger chat features.
-		$this->messenger_chat = new WC_Facebookcommerce_MessengerChat(
-			array(
-				'fb_page_id'             => $this->get_facebook_page_id(),
-				'facebook_jssdk_version' => $this->get_js_sdk_version(),
-			)
-		);
-
 		// Update products on change of status.
 		add_action(
 			'transition_post_status',
@@ -400,7 +383,7 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 	 */
 	public function __get( $key ) {
 		// Add warning for private properties.
-		if ( in_array( $key, array( 'events_tracker', 'messenger_chat', 'background_processor' ), true ) ) {
+		if ( in_array( $key, array( 'events_tracker', 'background_processor' ), true ) ) {
 			/* translators: %s property name. */
 			_doing_it_wrong( __FUNCTION__, sprintf( esc_html__( 'The %s property is private and should not be accessed outside its class.', 'facebook-for-woocommerce' ), esc_html( $key ) ), '3.0.32' );
 			return $this->$key;
@@ -717,7 +700,7 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 		<script>
 			window.facebookAdsToolboxConfig = {
 				hasGzipSupport: '<?php echo extension_loaded( 'zlib' ) ? 'true' : 'false'; ?>',
-				enabledPlugins: ['MESSENGER_CHAT','INSTAGRAM_SHOP', 'PAGE_SHOP'],
+				enabledPlugins: ['INSTAGRAM_SHOP', 'PAGE_SHOP'],
 				enableSubscription: '<?php echo class_exists( 'WC_Subscriptions' ) ? 'true' : 'false'; ?>',
 				popupOrigin: '<?php echo isset( $_GET['url'] ) ? esc_js( sanitize_text_field( wp_unslash( $_GET['url'] ) ) ) : 'https://www.facebook.com/'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>',
 				feedWasDisabled: 'true',
@@ -1181,7 +1164,7 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 
 		if ( $fb_product_item_id ) {
 			$woo_product->fb_visibility = Products::is_product_visible( $woo_product->woo_product );
-			$this->update_product_item( $woo_product, $fb_product_item_id );
+			$this->update_product_item_batch_api( $woo_product, $fb_product_item_id );
 			return $fb_product_item_id;
 		} else {
 			// Check if this is a new product item for an existing product group
@@ -1228,7 +1211,7 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 	 *
 	 * @param WC_Facebook_Product $woo_product
 	 * @param string|null         $fb_product_group_id
-	 * @return string facebook product item id
+	 * @return string
 	 */
 	public function create_product_simple( WC_Facebook_Product $woo_product, string $fb_product_group_id = null ): string {
 		$retailer_id = WC_Facebookcommerce_Utils::get_fb_retailer_id( $woo_product );
@@ -1238,8 +1221,7 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 		}
 
 		if ( $fb_product_group_id ) {
-			$fb_product_item_id = $this->create_product_item( $woo_product, $retailer_id, $fb_product_group_id );
-			return $fb_product_item_id;
+			return $this->create_product_item_batch_api( $woo_product, $retailer_id, $fb_product_group_id );
 		}
 		return '';
 	}
@@ -1343,6 +1325,35 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 			$message = sprintf( 'There was an error trying to update Product Group %s: %s', $fb_product_group_id, $e->getMessage() );
 			WC_Facebookcommerce_Utils::log( $message );
 		}
+	}
+
+	/**
+	 * Creates a product item using the facebook Catalog Batch API. This replaces existing functionality,
+	 * which is currently using facebook Product Item API implemented by `WC_Facebookcommerce_Integration::create_product_item`
+	 *
+	 * @since 3.1.7
+	 * @param WC_Facebook_Product $woo_product
+	 * @param string              $retailer_id
+	 **/
+	public function create_product_item_batch_api( $woo_product, $retailer_id, $product_group_id ): string {
+		try {
+			$product_data        = $woo_product->prepare_product( $retailer_id, \WC_Facebook_Product::PRODUCT_PREP_TYPE_ITEMS_BATCH );
+			$requests            = WC_Facebookcommerce_Utils::prepare_product_requests_items_batch( $product_data );
+			$facebook_catalog_id = $this->get_product_catalog_id();
+			$response            = $this->facebook_for_woocommerce->get_api()->send_item_updates( $facebook_catalog_id, $requests );
+
+			if ( $response->handles ) {
+				return '';
+			} else {
+				$this->display_error_message(
+					'Updated product on Facebook has failed.'
+				);
+			}
+		} catch ( ApiException $e ) {
+			$message = sprintf( 'There was an error trying to create a product item: %s', $e->getMessage() );
+			WC_Facebookcommerce_Utils::log( $message );
+		}
+		return '';
 	}
 
 	public function create_product_item( $woo_product, $retailer_id, $product_group_id ): string {
@@ -1472,6 +1483,37 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 	}
 
 	/**
+	 * Update existing product using batch API.
+	 *
+	 * @param WC_Facebook_Product $woo_product
+	 * @param string              $fb_product_item_id
+	 * @return void
+	 */
+	public function update_product_item_batch_api( WC_Facebook_Product $woo_product, string $fb_product_item_id ): void {
+		$product  = $woo_product->prepare_product( null, \WC_Facebook_Product::PRODUCT_PREP_TYPE_ITEMS_BATCH );
+		$requests = WC_Facebookcommerce_Utils::prepare_product_requests_items_batch( $product );
+
+		try {
+			$facebook_catalog_id = $this->get_product_catalog_id();
+			$response            = $this->facebook_for_woocommerce->get_api()->send_item_updates( $facebook_catalog_id, $requests );
+			if ( $response->handles ) {
+				$this->display_success_message(
+					'Updated product  <a href="https://facebook.com/' . $fb_product_item_id .
+					'" target="_blank">' . $fb_product_item_id . '</a> on Facebook.'
+				);
+			} else {
+				$this->display_error_message(
+					'Updated product  <a href="https://facebook.com/' . $fb_product_item_id .
+					'" target="_blank">' . $fb_product_item_id . '</a> on Facebook has failed.'
+				);
+			}
+		} catch ( ApiException $e ) {
+			$message = sprintf( 'There was an error trying to update a product item: %s', $e->getMessage() );
+			WC_Facebookcommerce_Utils::log( $message );
+		}
+	}
+
+	/**
 	 * Update existing product.
 	 *
 	 * @param WC_Facebook_Product $woo_product
@@ -1557,6 +1599,50 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 		}
 	}
 
+	/**
+	 * Displays Batch API completed message on simple_product_publish.
+	 * This is called by the hook `add_meta_boxes_product` because that is sufficient time
+	 * to retrieve product_item_id for the product item created via batch API.
+	 *
+	 * Some sanity checks are added before displaying the message after publish
+	 *  - product_item_id : if exists, means product was created else not and don't display
+	 *  - should_sync: Don't display if the product is not supposed to be synced.
+	 *
+	 * @param WP_Post $post Wordpress Post
+	 * @return void
+	 */
+	public function display_batch_api_completed( $post ) {
+		$fb_product         = new \WC_Facebook_Product( $post->ID );
+		$fb_product_item_id = null;
+		$should_sync        = true;
+
+		// Bail if this is not a WooCommerce product.
+		if ( ! $fb_product->woo_product instanceof \WC_Product ) {
+			return;
+		}
+
+		try {
+			facebook_for_woocommerce()->get_product_sync_validator( $fb_product->woo_product )->validate();
+		} catch ( \Exception $e ) {
+			$should_sync    = false;
+		}
+
+		if( $should_sync ) {
+			if ( $fb_product->woo_product->is_type( 'variable' ) ) {
+				$fb_product_item_id = $this->get_product_fbid( self::FB_PRODUCT_GROUP_ID, $post->ID, $fb_product->woo_product );
+			} else {
+				$fb_product_item_id = $this->get_product_fbid( self::FB_PRODUCT_ITEM_ID, $post->ID, $fb_product->woo_product );
+			}
+		}
+
+		if ( $fb_product_item_id ) {
+			$this->display_success_message(
+				'Created product  <a href="https://facebook.com/' . $fb_product_item_id .
+				'" target="_blank">' . $fb_product_item_id . '</a> on Facebook.'
+			);
+		}
+	}
+
 
 	/**
 	 * Checks the feed upload status (FBE v1.0).
@@ -1594,7 +1680,7 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 						include_once 'includes/fbproductfeed.php';
 					}
 
-					$this->fbproductfeed = new \WC_Facebook_Product_Feed( $this->get_product_catalog_id() );
+					$this->fbproductfeed = new \WC_Facebook_Product_Feed();
 				}
 
 				$status = $this->fbproductfeed->is_upload_complete( $this->settings );
@@ -2466,89 +2552,6 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
 		return $mode;
 	}
 
-	/**
-	 * Gets the configured Facebook messenger locale.
-	 *
-	 * @since 1.10.0
-	 *
-	 * @return string
-	 */
-	public function get_messenger_locale() {
-		/**
-		 * Filters the configured Facebook messenger locale.
-		 *
-		 * @since 1.10.0
-		 *
-		 * @param string $locale the configured Facebook messenger locale
-		 * @param \WC_Facebookcommerce_Integration $integration the integration instance
-		 */
-		return (string) apply_filters( 'wc_facebook_messenger_locale', get_option( self::SETTING_MESSENGER_LOCALE, 'en_US' ), $this );
-	}
-
-	/**
-	 * Gets the configured Facebook messenger greeting.
-	 *
-	 * @since 1.10.0
-	 *
-	 * @return string
-	 */
-	public function get_messenger_greeting() {
-		/**
-		 * Filters the configured Facebook messenger greeting.
-		 *
-		 * @since 1.10.0
-		 *
-		 * @param string $greeting the configured Facebook messenger greeting
-		 * @param \WC_Facebookcommerce_Integration $integration the integration instance
-		 */
-		$greeting = (string) apply_filters( 'wc_facebook_messenger_greeting', get_option( self::SETTING_MESSENGER_GREETING, __( "Hi! We're here to answer any questions you may have.", 'facebook-for-woocommerce' ) ), $this );
-		return Helper::str_truncate( $greeting, $this->get_messenger_greeting_max_characters(), '' );
-	}
-
-	/**
-	 * Gets the maximum number of characters allowed in the messenger greeting.
-	 *
-	 * @since 1.10.0
-	 *
-	 * @return int
-	 */
-	public function get_messenger_greeting_max_characters() {
-		$default = 80;
-
-		/**
-		 * Filters the maximum number of characters allowed in the messenger greeting.
-		 *
-		 * @since 1.10.0
-		 *
-		 * @param int $max the maximum number of characters allowed in the messenger greeting
-		 * @param \WC_Facebookcommerce_Integration $integration the integration instance
-		 */
-		$max = (int) apply_filters( 'wc_facebook_messenger_greeting_max_characters', $default, $this );
-
-		return $max < 1 ? $default : $max;
-	}
-
-	/**
-	 * Gets the configured Facebook messenger color hex.
-	 *
-	 * This is used to style the messenger UI.
-	 *
-	 * @since 1.10.0
-	 *
-	 * @return string
-	 */
-	public function get_messenger_color_hex() {
-		/**
-		 * Filters the configured Facebook messenger color hex.
-		 *
-		 * @since 1.10.0
-		 *
-		 * @param string $hex the configured Facebook messenger color hex
-		 * @param \WC_Facebookcommerce_Integration $integration the integration instance
-		 */
-		return (string) apply_filters( 'wc_facebook_messenger_color_hex', get_option( self::SETTING_MESSENGER_COLOR_HEX, '#0084ff' ), $this );
-	}
-
 	/** Setter methods ************************************************************************************************/
 
 
@@ -2712,25 +2715,6 @@ class WC_Facebookcommerce_Integration extends WC_Integration {
  	public function is_legacy_feed_file_generation_enabled() {
  		return 'yes' === get_option( self::OPTION_LEGACY_FEED_FILE_GENERATION_ENABLED, 'yes' );
  	}
-
-	/**
-	 * Determines whether the Facebook messenger is enabled.
-	 *
-	 * @since 1.10.0
-	 *
-	 * @return bool
-	 */
-	public function is_messenger_enabled() {
-		/**
-		 * Filters whether the Facebook messenger is enabled.
-		 *
-		 * @since 1.10.0
-		 *
-		 * @param bool $is_enabled whether the Facebook messenger is enabled
-		 * @param \WC_Facebookcommerce_Integration $integration the integration instance
-		 */
-		return (bool) apply_filters( 'wc_facebook_is_messenger_enabled', 'yes' === get_option( self::SETTING_ENABLE_MESSENGER ), $this );
-	}
 
 	/**
 	 * Determines whether debug mode is enabled.

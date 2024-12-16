@@ -123,6 +123,4 @@ class Request extends API\Request {
 			'item_type'    => 'PRODUCT_ITEM',
 		);
 	}
-
-
 }

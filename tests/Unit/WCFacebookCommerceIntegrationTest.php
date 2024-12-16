@@ -520,18 +520,23 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 
 		$product_to_update->set_meta_data( Products::VISIBILITY_META_KEY, true );
 
-		$facebook_product                               = new WC_Facebook_Product( $product_to_update->get_id() );
-		$facebook_product_data                          = $facebook_product->prepare_product();
-		$facebook_product_data['additional_image_urls'] = '';
+		$facebook_product                                    = new WC_Facebook_Product( $product_to_update->get_id() );
+		$facebook_product_data                               = $facebook_product->prepare_product(null, \WC_Facebook_Product::PRODUCT_PREP_TYPE_ITEMS_BATCH );
+		$this->integration->product_catalog_id               = '123123123123123123';
 		/* Data coming from _POST data. */
-		$facebook_product_data['description'] = 'Facebook product description.';
-		$facebook_product_data['price']       = 19900;
-		$facebook_product_data['category']    = 1718;
+		$facebook_product_data['description']                = 'Facebook product description.';
+		$facebook_product_data['price']                      = '199 USD';
+		$facebook_product_data['google_product_category']    = 1718;
+
+		$requests = WC_Facebookcommerce_Utils::prepare_product_requests_items_batch($facebook_product_data);
 
 		$this->api->expects( $this->once() )
-			->method( 'update_product_item' )
-			->with( 'facebook-product-item-id', $facebook_product_data )
-			->willReturn( new API\ProductCatalog\Products\Update\Response( '{"success":true}' ) );
+			->method( 'send_item_updates' )
+			->with(
+				$this->integration->get_product_catalog_id(),
+				$requests
+			)
+			->willReturn( new API\ProductCatalog\ItemsBatch\Create\Response( '{"handles":"abcxyz"}' ) );
 
 		$this->integration->on_product_save( $product_to_update->get_id() );
 
@@ -721,9 +726,11 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 			->method( 'is_connected' )
 			->willReturn( true );
 
-		$product          = WC_Helper_Product::create_simple_product();
-		$facebook_product = new WC_Facebook_Product( $product );
-		$product_data     = $facebook_product->prepare_product();
+		$product                               = WC_Helper_Product::create_simple_product();
+		$facebook_product                      = new WC_Facebook_Product( $product );
+		$product_data                          = $facebook_product->prepare_product(null, \WC_Facebook_Product::PRODUCT_PREP_TYPE_ITEMS_BATCH );
+		$requests                              = WC_Facebookcommerce_Utils::prepare_product_requests_items_batch($product_data);
+		$this->integration->product_catalog_id = '123123123123123123';
 		if ( empty( $product_data['additional_image_urls'] ) ) {
 			$product_data['additional_image_urls'] = '';
 		}
@@ -737,9 +744,12 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 			->willReturn( $product_validator );
 
 		$this->api->expects( $this->once() )
-			->method( 'update_product_item' )
-			->with( 'facebook-product-id', $product_data )
-			->willReturn( new API\ProductCatalog\Products\Update\Response( '{"success":true}' ) );
+			->method( 'send_item_updates' )
+			->with(
+				$this->integration->get_product_catalog_id(),
+				$requests
+			)
+			->willReturn( new API\ProductCatalog\ItemsBatch\Create\Response( '{"handles":"abcxyz"}' ) );
 
 		/* Statuses involved into logic: publish, trash */
 		$new_status = 'publish';
@@ -818,14 +828,19 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 			->with( $product )
 			->willReturn( $validator );
 
+		$this->integration->product_catalog_id          = '123123123123123123';
 		$facebook_product                               = new WC_Facebook_Product( $product->get_id() );
-		$facebook_product_data                          = $facebook_product->prepare_product();
-		$facebook_product_data['additional_image_urls'] = '';
+		$facebook_product_data                          = $facebook_product->prepare_product(null, \WC_Facebook_Product::PRODUCT_PREP_TYPE_ITEMS_BATCH );
+
+		$requests = WC_Facebookcommerce_Utils::prepare_product_requests_items_batch($facebook_product_data);
 
 		$this->api->expects( $this->once() )
-			->method( 'update_product_item' )
-			->with( 'facebook-product-item-id', $facebook_product_data )
-			->willReturn( new API\ProductCatalog\Products\Update\Response( '{"success":true}' ) );
+			->method( 'send_item_updates' )
+			->with(
+				$this->integration->get_product_catalog_id(),
+				$requests
+			)
+			->willReturn( new API\ProductCatalog\ItemsBatch\Create\Response( '{"handles":"abcxyz"}' ) );
 
 		$this->integration->on_product_publish( $product->get_id() );
 	}
@@ -1043,12 +1058,18 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 		$facebook_product->woo_product->set_stock_status( 'instock' );
 		add_post_meta( $product->get_id(), WC_Facebookcommerce_Integration::FB_PRODUCT_ITEM_ID, 'facebook-simple-product-item-id' );
 
-		$facebook_product_data                          = $facebook_product->prepare_product();
-		$facebook_product_data['additional_image_urls'] = '';
+		$this->integration->product_catalog_id          = '123123123123123123';
+		$facebook_product_data                          = $facebook_product->prepare_product(null, \WC_Facebook_Product::PRODUCT_PREP_TYPE_ITEMS_BATCH );
+
+		$requests = WC_Facebookcommerce_Utils::prepare_product_requests_items_batch($facebook_product_data);
+
 		$this->api->expects( $this->once() )
-			->method( 'update_product_item' )
-			->with( 'facebook-simple-product-item-id', $facebook_product_data )
-			->willReturn( new API\ProductCatalog\Products\Update\Response( '{"success":true}' ) );
+			->method( 'send_item_updates' )
+			->with(
+				$this->integration->get_product_catalog_id(),
+				$requests
+			)
+			->willReturn( new API\ProductCatalog\ItemsBatch\Create\Response( '{"handles":"abcxyz"}' ) );
 
 		$facebook_product_item_id = $this->integration->on_simple_product_publish( $product->get_id(), $facebook_product );
 
@@ -1063,8 +1084,10 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 	public function test_on_simple_product_publish_existing_product_creates_product() {
 		add_option( WC_Facebookcommerce_Integration::OPTION_PRODUCT_CATALOG_ID, '1234567891011121314' );
 
-		$product          = WC_Helper_Product::create_simple_product();
-		$facebook_product = new WC_Facebook_Product( $product->get_id() );
+		$product               = WC_Helper_Product::create_simple_product();
+		$facebook_product      = new WC_Facebook_Product( $product->get_id() );
+		$facebook_product_data = $facebook_product->prepare_product(null, \WC_Facebook_Product::PRODUCT_PREP_TYPE_ITEMS_BATCH );
+		$requests              = WC_Facebookcommerce_Utils::prepare_product_requests_items_batch($facebook_product_data);
 
 		/* Product should be synced with all its variations. So seven calls expected. */
 		$validator = $this->createMock( ProductValidator::class );
@@ -1087,16 +1110,15 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 			)
 			->willReturn( new API\ProductCatalog\ProductGroups\Create\Response( '{"id":"facebook-simple-product-group-item-id"}' ) );
 		$this->api->expects( $this->once() )
-			->method( 'create_product_item' )
+			->method( 'send_item_updates' )
 			->with(
-				'facebook-simple-product-group-item-id',
-				$facebook_product->prepare_product( WC_Facebookcommerce_Utils::get_fb_retailer_id( $facebook_product ) )
+				$this->integration->get_product_catalog_id(),
+				$requests
 			)
-			->willReturn( new API\ProductCatalog\Products\Create\Response( '{"id":"facebook-simple-product-group-item-id"}' ) );
+			->willReturn( new API\ProductCatalog\ItemsBatch\Create\Response( '{"handles":"abcxyz"}' ) );
 
-		$facebook_product_item_id = $this->integration->on_simple_product_publish( $product->get_id(), $facebook_product );
+		$this->integration->on_simple_product_publish( $product->get_id(), $facebook_product );
 
-		$this->assertEquals( 'facebook-simple-product-group-item-id', $facebook_product_item_id );
 		$this->assertEquals(
 			'facebook-simple-product-group-item-id',
 			get_post_meta( $facebook_product->get_id(), WC_Facebookcommerce_Integration::FB_PRODUCT_GROUP_ID, true )
@@ -1154,9 +1176,11 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 	public function test_create_product_simple_creates_product_group_before_creating_product_item() {
 		add_option( WC_Facebookcommerce_Integration::OPTION_PRODUCT_CATALOG_ID, '123456789101112' );
 
-		$product          = WC_Helper_Product::create_simple_product();
-		$facebook_product = new WC_Facebook_Product( $product->get_id() );
-		$retailer_id      = WC_Facebookcommerce_Utils::get_fb_retailer_id( $facebook_product );
+		$product               = WC_Helper_Product::create_simple_product();
+		$facebook_product      = new WC_Facebook_Product( $product->get_id() );
+		$facebook_product_data = $facebook_product->prepare_product(null, \WC_Facebook_Product::PRODUCT_PREP_TYPE_ITEMS_BATCH );
+		$requests              = WC_Facebookcommerce_Utils::prepare_product_requests_items_batch($facebook_product_data);
+		$retailer_id           = WC_Facebookcommerce_Utils::get_fb_retailer_id( $facebook_product );
 
 		$data = [
 			'retailer_id' => $retailer_id,
@@ -1166,17 +1190,17 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 			->with( '123456789101112', $data )
 			->willReturn( new API\ProductCatalog\ProductGroups\Create\Response( '{"id":"facebook-simple-product-group-id"}' ) );
 
-		$data = $facebook_product->prepare_product( $retailer_id );
 		$this->api->expects( $this->once() )
-			->method( 'create_product_item' )
-			->with( 'facebook-simple-product-group-id', $data )
-			->willReturn( new API\ProductCatalog\Products\Create\Response( '{"id":"facebook-simple-product-item-id"}' ) );
+			->method( 'send_item_updates' )
+			->with(
+				$this->integration->get_product_catalog_id(),
+				$requests
+			)
+			->willReturn( new API\ProductCatalog\ItemsBatch\Create\Response( '{"handles":"abcxyz"}' ) );
 
-		$facebook_product_item_id = $this->integration->create_product_simple( $facebook_product );
+		$this->integration->create_product_simple( $facebook_product );
 
 		$this->assertEquals( 'facebook-simple-product-group-id', get_post_meta( $facebook_product->get_id(), WC_Facebookcommerce_Integration::FB_PRODUCT_GROUP_ID, true ) );
-		$this->assertEquals( 'facebook-simple-product-item-id', get_post_meta( $facebook_product->get_id(), WC_Facebookcommerce_Integration::FB_PRODUCT_ITEM_ID, true ) );
-		$this->assertEquals( 'facebook-simple-product-item-id', $facebook_product_item_id );
 	}
 
 	/**
@@ -1187,20 +1211,20 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 	public function test_create_product_simple_creates_product_with_provided_product_group_id() {
 		add_option( WC_Facebookcommerce_Integration::OPTION_PRODUCT_CATALOG_ID, '123456789101112' );
 
-		$product          = WC_Helper_Product::create_simple_product();
-		$facebook_product = new WC_Facebook_Product( $product->get_id() );
-		$retailer_id      = WC_Facebookcommerce_Utils::get_fb_retailer_id( $facebook_product );
+		$product               = WC_Helper_Product::create_simple_product();
+		$facebook_product      = new WC_Facebook_Product( $product->get_id() );
+		$facebook_product_data = $facebook_product->prepare_product(null, \WC_Facebook_Product::PRODUCT_PREP_TYPE_ITEMS_BATCH );
+		$requests              = WC_Facebookcommerce_Utils::prepare_product_requests_items_batch($facebook_product_data);
 
-		$data = $facebook_product->prepare_product( $retailer_id );
 		$this->api->expects( $this->once() )
-			->method( 'create_product_item' )
-			->with( 'facebook-simple-product-group-id', $data )
-			->willReturn( new API\ProductCatalog\Products\Create\Response( '{"id":"facebook-simple-product-item-id"}' ) );
+			->method( 'send_item_updates' )
+			->with(
+				$this->integration->get_product_catalog_id(),
+				$requests
+			)
+			->willReturn( new API\ProductCatalog\ItemsBatch\Create\Response( '{"handles":"abcxyz"}' ) );
 
 		$facebook_product_item_id = $this->integration->create_product_simple( $facebook_product, 'facebook-simple-product-group-id' );
-
-		$this->assertEquals( 'facebook-simple-product-item-id', get_post_meta( $facebook_product->get_id(), WC_Facebookcommerce_Integration::FB_PRODUCT_ITEM_ID, true ) );
-		$this->assertEquals( 'facebook-simple-product-item-id', $facebook_product_item_id );
 	}
 
 	/**
@@ -2424,211 +2448,6 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Tests get messenger locale returns default locale.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_locale_no_filter_no_options() {
-		remove_all_filters( 'wc_facebook_messenger_locale' );
-		delete_option( WC_Facebookcommerce_Integration::SETTING_MESSENGER_LOCALE );
-
-		$locale = $this->integration->get_messenger_locale();
-
-		$this->assertEquals( 'en_US', $locale );
-	}
-
-	/**
-	 * Tests get messenger locale no filter, returns option value.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_locale_no_filter() {
-		remove_all_filters( 'wc_facebook_messenger_locale' );
-		add_option( WC_Facebookcommerce_Integration::SETTING_MESSENGER_LOCALE, 'fr-FR' );
-
-		$locale = $this->integration->get_messenger_locale();
-
-		$this->assertEquals( 'fr-FR', $locale );
-	}
-
-	/**
-	 * Tests get messenger locale with filter.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_locale_with_filter() {
-		add_filter(
-			'wc_facebook_messenger_locale',
-			function ( $locale ) {
-				return 'es-ES';
-			}
-		);
-		add_option( WC_Facebookcommerce_Integration::SETTING_MESSENGER_LOCALE, 'fr-FR' );
-
-		$locale = $this->integration->get_messenger_locale();
-
-		$this->assertEquals( 'es-ES', $locale );
-	}
-
-	/**
-	 * Tests get messenger greeting with no filters and no options set, returns
-	 * default greeting text which is also not truncated @see WC_Facebookcommerce_Integration::get_messenger_greeting_max_characters()
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_greeting_no_filter_no_options() {
-		remove_all_filters( 'wc_facebook_messenger_greeting' );
-		delete_option( WC_Facebookcommerce_Integration::SETTING_MESSENGER_GREETING );
-
-		$greeting = $this->integration->get_messenger_greeting();
-
-		$this->assertEquals( 'Hi! We\'re here to answer any questions you may have.', $greeting );
-	}
-
-	/**
-	 * Tests get messenger greeting with no filters but the message exceeds characters
-	 * limit so is truncated to the default 80 characters in length @see WC_Facebookcommerce_Integration::get_messenger_greeting_max_characters()
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_greeting_truncated_no_filter() {
-		remove_all_filters( 'wc_facebook_messenger_greeting' );
-		add_option(
-			WC_Facebookcommerce_Integration::SETTING_MESSENGER_GREETING,
-			'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum pulvinar sit amet sit.'
-		);
-
-		$greeting = $this->integration->get_messenger_greeting();
-
-		$this->assertEquals( 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum pulvinar sit', $greeting );
-	}
-
-	/**
-	 * Tests get messenger greeting with filter.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_greeting_truncated_with_filter() {
-		add_filter(
-			'wc_facebook_messenger_greeting',
-			function ( $greeting ) {
-				return 'Updated with filter. ' . $greeting;
-			}
-		);
-		add_option(
-			WC_Facebookcommerce_Integration::SETTING_MESSENGER_GREETING,
-			'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum pulvinar sit amet sit.'
-		);
-
-		$greeting = $this->integration->get_messenger_greeting();
-
-		$this->assertEquals( 'Updated with filter. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ve', $greeting );
-	}
-
-	/**
-	 * Tests get messenger greeting max characters returns default value when no filter is set.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_greeting_max_characters_no_filter() {
-		remove_all_filters( 'wc_facebook_messenger_greeting_max_characters' );
-
-		$length = $this->integration->get_messenger_greeting_max_characters();
-
-		$this->assertEquals( 80, $length );
-	}
-
-	/**
-	 * Tests get messenger greeting max character with filter which falls back to default
-	 * if returned filter value is less than 1.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_greeting_max_characters_with_filter_falls_back_to_default() {
-		add_filter(
-			'wc_facebook_messenger_greeting_max_characters',
-			function ( $length ) {
-				return 0;
-			}
-		);
-
-		$length = $this->integration->get_messenger_greeting_max_characters();
-
-		$this->assertEquals( 80, $length );
-	}
-
-	/**
-	 * Tests get messenger greeting max character with filter.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_greeting_max_characters_with_filter() {
-		add_filter(
-			'wc_facebook_messenger_greeting_max_characters',
-			function ( $length ) {
-				return 120;
-			}
-		);
-
-		$length = $this->integration->get_messenger_greeting_max_characters();
-
-		$this->assertEquals( 120, $length );
-	}
-
-	/**
-	 * Tests get messenger color hex when no filters nor options are set.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_color_hex_no_filter_no_options() {
-		remove_all_filters( 'wc_facebook_messenger_color_hex' );
-		delete_option( WC_Facebookcommerce_Integration::SETTING_MESSENGER_COLOR_HEX );
-
-		$hex = $this->integration->get_messenger_color_hex();
-
-		$this->assertEquals( '#0084ff', $hex );
-	}
-
-	/**
-	 * Tests get messenger color hex returns option value when no filter is set.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_color_hex_no_filter() {
-		remove_all_filters( 'wc_facebook_messenger_color_hex' );
-		add_option(
-			WC_Facebookcommerce_Integration::SETTING_MESSENGER_COLOR_HEX,
-			'#red'
-		);
-
-		$hex = $this->integration->get_messenger_color_hex();
-
-		$this->assertEquals( '#red', $hex );
-	}
-
-	/**
-	 * Tests get messenger color hex uses filter.
-	 *
-	 * @return void
-	 */
-	public function test_get_messenger_color_hex_with_filter() {
-		add_filter(
-			'wc_facebook_messenger_color_hex',
-			function ( $hex ) {
-				return '#green';
-			}
-		);
-		add_option(
-			WC_Facebookcommerce_Integration::SETTING_MESSENGER_COLOR_HEX,
-			'#red'
-		);
-
-		$hex = $this->integration->get_messenger_color_hex();
-
-		$this->assertEquals( '#green', $hex );
-	}
-
-	/**
 	 * Tests product catalog id option update with valid catalog id value.
 	 *
 	 * @return void
@@ -2949,59 +2768,6 @@ class WCFacebookCommerceIntegrationTest extends WP_UnitTestCase {
 		$result = $this->integration->is_legacy_feed_file_generation_enabled();
 
 		$this->assertFalse( $result );
-	}
-
-	/**
-	 * Tests is messenger enabled returns default value.
-	 *
-	 * @return void
-	 */
-	public function test_is_messenger_enabled_no_filter_no_option() {
-		remove_all_filters( 'wc_facebook_is_messenger_enabled' );
-		delete_option( WC_Facebookcommerce_Integration::SETTING_ENABLE_MESSENGER );
-
-		$result = $this->integration->is_messenger_enabled();
-
-		$this->assertFalse( $result );
-	}
-
-	/**
-	 * Tests is messenger enabled no filter but with option set.
-	 *
-	 * @return void
-	 */
-	public function test_is_messenger_enabled_no_filter() {
-		remove_all_filters( 'wc_facebook_is_messenger_enabled' );
-		add_option(
-			WC_Facebookcommerce_Integration::SETTING_ENABLE_MESSENGER,
-			'yes'
-		);
-
-		$result = $this->integration->is_messenger_enabled();
-
-		$this->assertTrue( $result );
-	}
-
-	/**
-	 * Tests is messenger enabled no filter but with filter.
-	 *
-	 * @return void
-	 */
-	public function test_is_messenger_enabled_with_filter() {
-		add_filter(
-			'wc_facebook_is_messenger_enabled',
-			function ( $is_enabled ) {
-				return true;
-			}
-		);
-		add_option(
-			WC_Facebookcommerce_Integration::SETTING_ENABLE_MESSENGER,
-			'no'
-		);
-
-		$result = $this->integration->is_messenger_enabled();
-
-		$this->assertTrue( $result );
 	}
 
 	/**

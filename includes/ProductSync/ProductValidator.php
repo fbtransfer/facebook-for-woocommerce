@@ -347,10 +347,8 @@ class ProductValidator {
 
 			// Variable product has no variations with sync enabled so it shouldn't be synced.
 			throw $invalid_exception;
-		} else {
-			if ( 'no' === $this->product->get_meta( self::SYNC_ENABLED_META_KEY ) ) {
+		} elseif ( 'no' === $this->product->get_meta( self::SYNC_ENABLED_META_KEY ) ) {
 				throw $invalid_exception;
-			}
 		}
 	}
 
@@ -443,5 +441,4 @@ class ProductValidator {
 			throw new ProductInvalidException( __( 'Too many attributes selected for product. Use 4 or less.', 'facebook-for-woocommerce' ) );
 		}
 	}
-
 }

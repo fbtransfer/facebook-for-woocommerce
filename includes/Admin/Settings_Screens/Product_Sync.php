@@ -20,7 +20,7 @@ use WooCommerce\Facebook\Products;
 use WooCommerce\Facebook\Products\Sync;
 
 /**
- * The Messenger settings screen object.
+ * The Product Sync settings screen object.
  */
 class Product_Sync extends Abstract_Settings_Screen {
 
@@ -38,9 +38,10 @@ class Product_Sync extends Abstract_Settings_Screen {
 	 * Connection constructor.
 	 */
 	public function __construct() {
-		$this->id    = self::ID;
-		$this->label = __( 'Product sync', 'facebook-for-woocommerce' );
-		$this->title = __( 'Product sync', 'facebook-for-woocommerce' );
+		$this->id                = self::ID;
+		$this->label             = __( 'Product sync', 'facebook-for-woocommerce' );
+		$this->title             = __( 'Product sync', 'facebook-for-woocommerce' );
+		$this->documentation_url = 'https://woocommerce.com/document/facebook-for-woocommerce/#product-sync-settings';
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'woocommerce_admin_field_product_sync_title', array( $this, 'render_title' ) );
 		add_action( 'woocommerce_admin_field_product_sync_google_product_categories', array( $this, 'render_google_product_category_field' ) );
@@ -87,9 +88,9 @@ class Product_Sync extends Abstract_Settings_Screen {
 				'excluded_category_ids'           => facebook_for_woocommerce()->get_integration()->get_excluded_product_category_ids(),
 				'excluded_tag_ids'                => facebook_for_woocommerce()->get_integration()->get_excluded_product_tag_ids(),
 				'i18n'                            => array(
-					/* translators: Placeholders %s - html code for a spinner icon */
 					'confirm_resync'                => esc_html__( 'Your products will now be resynced to Facebook, this may take some time.', 'facebook-for-woocommerce' ),
 					'confirm_sync'                  => esc_html__( "Facebook for WooCommerce automatically syncs your products on create/update. Are you sure you want to force product resync?\n\nThis will query all published products and may take some time. You only need to do this if your products are out of sync or some of your products did not sync.", 'facebook-for-woocommerce' ),
+					/* translators: Placeholders %s - html code for a spinner icon */
 					'sync_in_progress'              => sprintf( esc_html__( 'Your products are syncing - you may safely leave this page %s', 'facebook-for-woocommerce' ), '<span class="spinner is-active"></span>' ),
 					'sync_remaining_items_singular' => sprintf( esc_html( translate_nooped_plural( $sync_remaining_items_string, 1 ) ), '<strong>', '</strong>', '<span class="spinner is-active"></span>' ),
 					'sync_remaining_items_plural'   => sprintf( esc_html( translate_nooped_plural( $sync_remaining_items_string, 2 ) ), '<strong>', '</strong>', '<span class="spinner is-active"></span>' ),
@@ -261,11 +262,12 @@ class Product_Sync extends Abstract_Settings_Screen {
 				'title' => __( 'Product sync', 'facebook-for-woocommerce' ),
 			),
 			array(
-				'id'      => \WC_Facebookcommerce_Integration::SETTING_ENABLE_PRODUCT_SYNC,
-				'title'   => __( 'Enable product sync', 'facebook-for-woocommerce' ),
-				'type'    => 'checkbox',
-				'label'   => ' ',
-				'default' => 'yes',
+				'id'       => \WC_Facebookcommerce_Integration::SETTING_ENABLE_PRODUCT_SYNC,
+				'title'    => __( 'Enable product sync', 'facebook-for-woocommerce' ),
+				'type'     => 'checkbox',
+				'label'    => ' ',
+				'default'  => 'yes',
+				'desc_tip' => __( 'Enable product syncing with Facebook.', 'facebook-for-woocommerce' ),
 			),
 
 			array(
@@ -274,7 +276,7 @@ class Product_Sync extends Abstract_Settings_Screen {
 				'type'              => 'multiselect',
 				'class'             => 'wc-enhanced-select product-sync-field',
 				'css'               => 'min-width: 300px;',
-				'desc_tip'          => __( 'Products in one or more of these categories will not sync to Facebook.', 'facebook-for-woocommerce' ),
+				'desc_tip'          => __( 'Products in any of these categories will not sync to Facebook.', 'facebook-for-woocommerce' ),
 				'default'           => array(),
 				'options'           => is_array( $product_categories ) ? $product_categories : array(),
 				'custom_attributes' => array(
@@ -288,7 +290,7 @@ class Product_Sync extends Abstract_Settings_Screen {
 				'type'              => 'multiselect',
 				'class'             => 'wc-enhanced-select product-sync-field',
 				'css'               => 'min-width: 300px;',
-				'desc_tip'          => __( 'Products with one or more of these tags will not sync to Facebook.', 'facebook-for-woocommerce' ),
+				'desc_tip'          => __( 'Products with any of these tags will not sync to Facebook.', 'facebook-for-woocommerce' ),
 				'default'           => array(),
 				'options'           => is_array( $product_tags ) ? $product_tags : array(),
 				'custom_attributes' => array(

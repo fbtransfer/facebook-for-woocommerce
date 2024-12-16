@@ -118,6 +118,4 @@ trait Rate_Limited_Response {
 
 		return ! empty( $usage_data['estimated_time_to_regain_access'] ) ? (int) $usage_data['estimated_time_to_regain_access'] : null;
 	}
-
-
 }
