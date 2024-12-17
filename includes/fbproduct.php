@@ -766,7 +766,7 @@ class WC_Facebook_Product {
 		if ( self::PRODUCT_PREP_TYPE_FEED !== $type_to_prepare_for ) {
 			$this->prepare_variants_for_item( $product_data );
 		} elseif (
-		WC_Facebookcommerce_Utils::is_all_caps( $product_data['description'] )
+			WC_Facebookcommerce_Utils::is_all_caps( $product_data['description'] )
 		) {
 			$product_data['description'] =
 			mb_strtolower( $product_data['description'] );
