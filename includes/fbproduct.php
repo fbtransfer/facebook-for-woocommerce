@@ -36,6 +36,8 @@ class WC_Facebook_Product {
 	const FB_VARIANT_IMAGE       = 'fb_image';
 	const FB_VISIBILITY          = 'fb_visibility';
 	const FB_REMOVE_FROM_SYNC    = 'fb_remove_from_sync';
+	const FB_BRAND               = 'fb_brand';
+	const FB_MPN              	 = 'fb_mpn';
 
 	const MIN_DATE_1 = '1970-01-29';
 	const MIN_DATE_2 = '1970-01-30';
@@ -89,6 +91,16 @@ class WC_Facebook_Product {
 	 */
 	public $fb_visibility;
 
+	/**
+	 * @var string Facebook Brand.
+	 */
+	public $fb_brand;
+
+	/**
+	 * @var string Manufacturer Part Number (MPN).
+	 */
+	public $fb_mpn;
+
 	public function __construct( $wpid, $parent_product = null ) {
 
 		if ( $wpid instanceof WC_Product ) {
@@ -104,6 +116,8 @@ class WC_Facebook_Product {
 		$this->fb_use_parent_image    = null;
 		$this->main_description       = '';
 		$this->sync_short_description = \WC_Facebookcommerce_Integration::PRODUCT_DESCRIPTION_MODE_SHORT === facebook_for_woocommerce()->get_integration()->get_product_description_mode();
+		$this->fb_brand               = '';
+		$this->fb_mpn                 = '';
 
 		if ( $meta = get_post_meta( $this->id, self::FB_VISIBILITY, true ) ) {
 			$this->fb_visibility = wc_string_to_bool( $meta );
@@ -118,6 +132,8 @@ class WC_Facebook_Product {
 			$this->gallery_urls        = $parent_product->get_gallery_urls();
 			$this->fb_use_parent_image = $parent_product->get_use_parent_image();
 			$this->main_description    = $parent_product->get_fb_description();
+			$this->fb_brand            = $parent_product->get_fb_brand();
+			$this->fb_mpn              = $parent_product->get_fb_mpn();
 		}
 	}
 
@@ -358,6 +374,30 @@ class WC_Facebook_Product {
 		}
 	}
 
+	public function set_fb_brand( $fb_brand ) {
+		$fb_brand  = stripslashes(
+			WC_Facebookcommerce_Utils::clean_string( $fb_brand )
+		);
+		$this->fb_brand = $fb_brand;
+		update_post_meta(
+			$this->id,
+			self::FB_BRAND,
+			$fb_brand
+		);
+	}
+
+	public function set_fb_mpn( $fb_mpn ) {
+		$fb_brand  = stripslashes(
+			WC_Facebookcommerce_Utils::clean_string( $fb_mpn )
+		);
+		$this->fb_mpn = $fb_mpn;
+		update_post_meta(
+			$this->id,
+			self::FB_MPN,
+			$fb_mpn
+		);
+	}
+
 	public function set_price( $price ) {
 		if ( is_numeric( $price ) ) {
 			update_post_meta(
@@ -389,6 +429,48 @@ class WC_Facebook_Product {
 			self::FB_VARIANT_IMAGE,
 			$this->fb_use_parent_image
 		);
+	}
+
+	public function get_fb_brand() {
+		$fb_brand = '';
+
+
+		// Check if the brand is already set
+		if ( $this->fb_brand ) {
+			$fb_brand = $this->fb_brand;
+		}
+
+		// If not set, try to get brand from post meta
+		if ( empty( $fb_brand ) ) {
+			$fb_brand = get_post_meta(
+				$this->id,
+				self::FB_BRAND,
+				true
+			);
+		}
+
+		// If still empty, check if this is a variation and get the parent brand
+		if ( empty( $fb_brand ) && $this->is_type('variation') ) {
+			$parent_id = $this->get_parent_id();
+			if ( $parent_id ) {
+				$fb_brand = get_post_meta($parent_id, self::FB_BRAND, true);
+			}
+		}
+
+		// Fallback to brand attribute or store name if no brand found
+		if ( empty( $fb_brand ) ) {
+			$brand = get_post_meta( $this->id, Products::ENHANCED_CATALOG_ATTRIBUTES_META_KEY_PREFIX . 'brand', true );
+			$brand_taxonomy = get_the_term_list( $this->id, 'product_brand', '', ', ' );
+			if ( $brand ) {
+				$fb_brand = WC_Facebookcommerce_Utils::clean_string( $brand );
+			} elseif ( !is_wp_error( $brand_taxonomy ) && $brand_taxonomy ) {
+				$fb_brand = WC_Facebookcommerce_Utils::clean_string( $brand_taxonomy );
+			} else {
+				$fb_brand = wp_strip_all_tags( WC_Facebookcommerce_Utils::get_store_name() );
+			}
+		}
+
+		return WC_Facebookcommerce_Utils::clean_string( $fb_brand );
 	}
 
 	public function get_fb_description() {
@@ -498,6 +580,33 @@ class WC_Facebook_Product {
 		return $product_data;
 	}
 
+	public function get_fb_mpn() {
+		$fb_mpn = '';
+
+		// Check if the MPN is already set
+		if ( $this->fb_mpn ) {
+			$fb_mpn = $this->fb_mpn;
+		}
+
+		// If not set, try to get MPN from post meta
+		if ( empty( $fb_mpn ) ) {
+			$fb_mpn = get_post_meta(
+				$this->id,
+				self::FB_MPN,
+				true
+			);
+		}
+
+		// If still empty, check if this is a variation and get the parent MPN
+		if ( empty( $fb_mpn ) && $this->is_type('variation') ) {
+			$parent_id = $this->get_parent_id();
+			if ( $parent_id ) {
+				$fb_mpn = get_post_meta($parent_id, self::FB_MPN, true);
+			}
+		}
+
+		return WC_Facebookcommerce_Utils::clean_string( $fb_mpn );
+	}
 
 	public function get_price_plus_tax( $price ) {
 		$woo_product = $this->woo_product;
@@ -650,18 +759,6 @@ class WC_Facebook_Product {
 		$categories =
 		WC_Facebookcommerce_Utils::get_product_categories( $id );
 
-		// Get brand attribute.
-		$brand = get_post_meta( $id, Products::ENHANCED_CATALOG_ATTRIBUTES_META_KEY_PREFIX . 'brand', true );
-		$brand_taxonomy = get_the_term_list( $id, 'product_brand', '', ', ' );
-
-		if ( $brand ) {
-			$brand = WC_Facebookcommerce_Utils::clean_string( $brand );
-		} elseif ( !is_wp_error( $brand_taxonomy ) && $brand_taxonomy ) {
-			$brand = WC_Facebookcommerce_Utils::clean_string( $brand_taxonomy );
-		} else {
-			$brand = wp_strip_all_tags( WC_Facebookcommerce_Utils::get_store_name() );
-		}
-
 		if ( self::PRODUCT_PREP_TYPE_ITEMS_BATCH === $type_to_prepare_for ) {
 			$product_data = array(
 				'title'                 => WC_Facebookcommerce_Utils::clean_string( $this->get_title() ),
@@ -670,7 +767,8 @@ class WC_Facebook_Product {
 				'additional_image_link' => $this->get_additional_image_urls( $image_urls ),
 				'link'                  => $product_url,
 				'product_type'          => $categories['categories'],
-				'brand'                 => Helper::str_truncate( $brand, 100 ),
+				'brand'                 => Helper::str_truncate( $this->get_fb_brand(), 100 ),
+				'mpn'                 	=> Helper::str_truncate( $this->get_fb_mpn(), 100 ),
 				'retailer_id'           => $retailer_id,
 				'price'                 => $this->get_fb_price( true ),
 				'availability'          => $this->is_in_stock() ? 'in stock' : 'out of stock',
@@ -700,7 +798,8 @@ class WC_Facebook_Product {
 				 */
 				'category'              => $categories['categories'],
 				'product_type'          => $categories['categories'],
-				'brand'                 => Helper::str_truncate( $brand, 100 ),
+				'brand'                 => Helper::str_truncate( $this->get_fb_brand(), 100 ),
+				'mpn'                 	=> Helper::str_truncate( $this->get_fb_mpn(), 100 ),
 				'retailer_id'           => $retailer_id,
 				'price'                 => $this->get_fb_price(),
 				'currency'              => get_woocommerce_currency(),
