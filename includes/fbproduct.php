@@ -944,7 +944,11 @@ class WC_Facebook_Product {
 		$matched_attributes = array_filter(
 			$all_attributes,
 			function( $attribute ) use ( $sanitized_keys ) {
-				return in_array( $attribute['key'], $sanitized_keys );
+				// Check if $attribute is an array and has the 'key' index
+				if (is_array($attribute) && isset($attribute['key'])) {
+					return in_array($attribute['key'], $sanitized_keys);
+				}
+				return false; // Return false if $attribute is not valid
 			}
 		);
 
@@ -979,6 +983,11 @@ class WC_Facebook_Product {
 		// Loop through variants (size, color, etc) if they exist
 		// For each product field type, pull the single variant
 		foreach ( $variant_names as $original_variant_name ) {
+
+			// Ensure that the attribute exists before accessing it
+			if ( ! isset( $attributes[ $original_variant_name ] ) ) {
+				continue; // Skip if the attribute is not set
+			}
 
 			// don't handle any attributes that are designated as Commerce attributes
 			if ( in_array( str_replace( 'attribute_', '', strtolower( $original_variant_name ) ), Products::get_distinct_product_attributes( $this->woo_product ), true ) ) {
