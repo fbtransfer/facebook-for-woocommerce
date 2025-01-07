@@ -1159,3 +1159,4 @@ class WC_Facebook_Product {
 		return $final_variants;
 	}
 }
+
