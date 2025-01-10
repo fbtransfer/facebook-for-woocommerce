@@ -662,30 +662,7 @@ class WC_Facebook_Product {
 			$brand = wp_strip_all_tags( WC_Facebookcommerce_Utils::get_store_name() );
 		}
 
-		$custom_fields = array(
-			'description' => '',
-			'price' => '',
-			'image_url' => ''
-		);
-
-		// check if fb specific description exists
-		$fb_description = get_post_meta($this->id, self::FB_PRODUCT_DESCRIPTION, true);
-		if (!empty($fb_description)){
-			$custom_fields['description'] = $fb_description;
-		}
-		
-		// check if fb specific price exists
-		$fb_price = get_post_meta($this->id, self::FB_PRODUCT_PRICE, true);
-		if (!empty($fb_price)){
-			$custom_fields['price'] = $fb_price;
-			
-		}
-		
-		// check if fb specific image url exists
-		$fb_image = get_post_meta($this->id, self::FB_PRODUCT_IMAGE, true);
-		if (!empty($fb_image)){
-			$custom_fields['image_url'] = $fb_image;
-		}
+		$custom_fields = $this->get_facebook_specific_fields();
 
 		if ( self::PRODUCT_PREP_TYPE_ITEMS_BATCH === $type_to_prepare_for ) {
 			$product_data = array(
@@ -1091,5 +1068,17 @@ class WC_Facebook_Product {
 		return $final_variants;
 	}
 
+	/**
+	 * Returns information about which fields are using Facebook-specific values.
+	 *
+	 * @return array
+	 */
+	private function get_facebook_specific_fields(): array {
+		return array(
+			'has_fb_description' => !empty( get_post_meta ( $this->id, self::FB_PRODUCT_DESCRIPTION, true ) ) ? 'yes' : 'no',
+			'has_fb_price'       => !empty(get_post_meta ( $this->id, self::FB_PRODUCT_PRICE, true ) ) ? 'yes' : 'no',
+			'has_fb_image'       => !empty( get_post_meta ( $this->id, self::FB_PRODUCT_IMAGE, true ) ) ? 'yes' : 'no'
+		);
+	}
 
 }
