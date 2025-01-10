@@ -91,15 +91,6 @@ class WC_Facebook_Product {
 	 */
 	public $fb_visibility;
 
-	/**
-	 * @var string Facebook Brand.
-	 */
-	public $fb_brand;
-
-	/**
-	 * @var string Manufacturer Part Number (MPN).
-	 */
-	public $fb_mpn;
 
 	public function __construct( $wpid, $parent_product = null ) {
 
@@ -116,8 +107,6 @@ class WC_Facebook_Product {
 		$this->fb_use_parent_image    = null;
 		$this->main_description       = '';
 		$this->sync_short_description = \WC_Facebookcommerce_Integration::PRODUCT_DESCRIPTION_MODE_SHORT === facebook_for_woocommerce()->get_integration()->get_product_description_mode();
-		$this->fb_brand               = '';
-		$this->fb_mpn                 = '';
 
 		if ( $meta = get_post_meta( $this->id, self::FB_VISIBILITY, true ) ) {
 			$this->fb_visibility = wc_string_to_bool( $meta );
@@ -132,8 +121,6 @@ class WC_Facebook_Product {
 			$this->gallery_urls        = $parent_product->get_gallery_urls();
 			$this->fb_use_parent_image = $parent_product->get_use_parent_image();
 			$this->main_description    = $parent_product->get_fb_description();
-			$this->fb_brand            = $parent_product->get_fb_brand();
-			$this->fb_mpn              = $parent_product->get_fb_mpn();
 		}
 	}
 
@@ -375,10 +362,9 @@ class WC_Facebook_Product {
 	}
 
 	public function set_fb_brand( $fb_brand ) {
-		$fb_brand  = stripslashes(
+		$fb_brand = stripslashes(
 			WC_Facebookcommerce_Utils::clean_string( $fb_brand )
 		);
-		$this->fb_brand = $fb_brand;
 		update_post_meta(
 			$this->id,
 			self::FB_BRAND,
@@ -387,10 +373,9 @@ class WC_Facebook_Product {
 	}
 
 	public function set_fb_mpn( $fb_mpn ) {
-		$fb_brand  = stripslashes(
+		$fb_mpn = stripslashes(
 			WC_Facebookcommerce_Utils::clean_string( $fb_mpn )
 		);
-		$this->fb_mpn = $fb_mpn;
 		update_post_meta(
 			$this->id,
 			self::FB_MPN,
@@ -432,24 +417,14 @@ class WC_Facebook_Product {
 	}
 
 	public function get_fb_brand() {
-		$fb_brand = '';
+		// Get brand directly from post meta
+		$fb_brand = get_post_meta(
+			$this->id,
+			self::FB_BRAND,
+			true
+		);
 
-
-		// Check if the brand is already set
-		if ( $this->fb_brand ) {
-			$fb_brand = $this->fb_brand;
-		}
-
-		// If not set, try to get brand from post meta
-		if ( empty( $fb_brand ) ) {
-			$fb_brand = get_post_meta(
-				$this->id,
-				self::FB_BRAND,
-				true
-			);
-		}
-
-		// If still empty, check if this is a variation and get the parent brand
+		// If empty and this is a variation, get the parent brand
 		if ( empty( $fb_brand ) && $this->is_type('variation') ) {
 			$parent_id = $this->get_parent_id();
 			if ( $parent_id ) {
@@ -462,9 +437,9 @@ class WC_Facebook_Product {
 			$brand = get_post_meta( $this->id, Products::ENHANCED_CATALOG_ATTRIBUTES_META_KEY_PREFIX . 'brand', true );
 			$brand_taxonomy = get_the_term_list( $this->id, 'product_brand', '', ', ' );
 			if ( $brand ) {
-				$fb_brand = WC_Facebookcommerce_Utils::clean_string( $brand );
+				$fb_brand = $brand;
 			} elseif ( !is_wp_error( $brand_taxonomy ) && $brand_taxonomy ) {
-				$fb_brand = WC_Facebookcommerce_Utils::clean_string( $brand_taxonomy );
+				$fb_brand = $brand_taxonomy;
 			} else {
 				$fb_brand = wp_strip_all_tags( WC_Facebookcommerce_Utils::get_store_name() );
 			}
@@ -581,23 +556,13 @@ class WC_Facebook_Product {
 	}
 
 	public function get_fb_mpn() {
-		$fb_mpn = '';
+		$fb_mpn = get_post_meta(
+			$this->id,
+			self::FB_MPN,
+			true
+		);
 
-		// Check if the MPN is already set
-		if ( $this->fb_mpn ) {
-			$fb_mpn = $this->fb_mpn;
-		}
-
-		// If not set, try to get MPN from post meta
-		if ( empty( $fb_mpn ) ) {
-			$fb_mpn = get_post_meta(
-				$this->id,
-				self::FB_MPN,
-				true
-			);
-		}
-
-		// If still empty, check if this is a variation and get the parent MPN
+		// If empty and this is a variation, get the parent MPN
 		if ( empty( $fb_mpn ) && $this->is_type('variation') ) {
 			$parent_id = $this->get_parent_id();
 			if ( $parent_id ) {
@@ -945,8 +910,8 @@ class WC_Facebook_Product {
 			$all_attributes,
 			function( $attribute ) use ( $sanitized_keys ) {
 				// Check if $attribute is an array and has the 'key' index
-				if (is_array($attribute) && isset($attribute['key'])) {
-					return in_array($attribute['key'], $sanitized_keys);
+				if ( is_array( $attribute ) && isset( $attribute['key'] ) ) {
+					return in_array( $attribute['key'], $sanitized_keys );
 				}
 				return false; // Return false if $attribute is not valid
 			}
